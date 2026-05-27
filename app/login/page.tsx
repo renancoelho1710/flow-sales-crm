@@ -87,23 +87,15 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#eef4ff] px-4 py-8 text-slate-950">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-[-160px] top-[-160px] h-[520px] w-[520px] rounded-full bg-blue-200/50 blur-3xl" />
-        <div className="absolute right-[-180px] top-[12%] h-[520px] w-[520px] rounded-full bg-sky-100/95 blur-3xl" />
-        <div className="absolute bottom-[-220px] left-[22%] h-[560px] w-[560px] rounded-full bg-white/90 blur-3xl" />
-        <div className="absolute bottom-[-180px] right-[18%] h-[420px] w-[420px] rounded-full bg-indigo-100/55 blur-3xl" />
-
-        <div className="absolute left-[-110px] top-[22%] h-[430px] w-[430px] rounded-full border border-white/80" />
-        <div className="absolute right-[-140px] bottom-[-120px] h-[540px] w-[540px] rounded-full border border-white/70" />
-        <div className="absolute left-[10%] top-[12%] h-3 w-3 rounded-full bg-blue-400/35" />
-        <div className="absolute right-[18%] top-[18%] h-4 w-4 rounded-full bg-blue-300/40" />
-        <div className="absolute bottom-[16%] left-[18%] h-2.5 w-2.5 rounded-full bg-sky-400/35" />
-
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.96),transparent_20%),radial-gradient(circle_at_78%_82%,rgba(255,255,255,0.78),transparent_24%),linear-gradient(135deg,rgba(239,246,255,0.9),rgba(255,255,255,0.72))]" />
-
-        <div className="absolute bottom-0 left-0 h-72 w-full bg-[radial-gradient(circle_at_20%_0%,rgba(37,99,235,0.11),transparent_32%),radial-gradient(circle_at_80%_55%,rgba(148,163,184,0.14),transparent_28%)]" />
-      </div>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#edf4ff] px-4 py-8 text-slate-950">
+      <Image
+        src="/login-background.png"
+        alt=""
+        fill
+        priority
+        sizes="100vw"
+        className="absolute inset-0 object-cover"
+      />
 
       {carregando ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/70 backdrop-blur-sm">
