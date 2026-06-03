@@ -1,25 +1,89 @@
 "use client";
 
 import Image from "next/image";
-import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
-export default function ResetarSenhaPage() {
+type EtapaReset = "codigo" | "senha";
+
+function limparCodigo(valor: string) {
+  return valor.replace(/\D/g, "").slice(0, 6);
+}
+
+function ResetarSenhaContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
 
+  const emailUrl = searchParams.get("email") || "";
+  const tokenUrl = searchParams.get("token") || "";
+
+  const [email, setEmail] = useState(emailUrl.trim().toLowerCase());
+  const [codigo, setCodigo] = useState(limparCodigo(tokenUrl));
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
   const [carregando, setCarregando] = useState(false);
+  const [validandoAutomatico, setValidandoAutomatico] = useState(false);
+  const [etapa, setEtapa] = useState<EtapaReset>("codigo");
+
+  const codigoCompleto = useMemo(() => codigo.length === 6, [codigo]);
+
+  async function validarCodigo(codigoInformado = codigo, emailInformado = email) {
+    const emailNormalizado = emailInformado.trim().toLowerCase();
+    const tokenNormalizado = limparCodigo(codigoInformado);
+
+    setErro("");
+    setSucesso("");
+
+    if (!emailNormalizado) {
+      setErro("Informe o e-mail usado na solicitação de recuperação.");
+      return false;
+    }
+
+    if (tokenNormalizado.length !== 6) {
+      setErro("Informe o código de 6 dígitos recebido por e-mail.");
+      return false;
+    }
+
+    setCarregando(true);
+
+    const { error } = await supabase.auth.verifyOtp({
+      email: emailNormalizado,
+      token: tokenNormalizado,
+      type: "recovery",
+    });
+
+    if (error) {
+      console.error("Erro ao validar código de recuperação:", error);
+      setErro("Código inválido ou expirado. Solicite uma nova recuperação de senha.");
+      setCarregando(false);
+      return false;
+    }
+
+    setEmail(emailNormalizado);
+    setCodigo(tokenNormalizado);
+    setEtapa("senha");
+    setSucesso("Código validado. Crie sua nova senha.");
+    setCarregando(false);
+    return true;
+  }
 
   async function salvarNovaSenha(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setErro("");
     setSucesso("");
+
+    if (etapa !== "senha") {
+      setErro("Valide o código recebido por e-mail antes de criar uma nova senha.");
+      return;
+    }
 
     if (senha.length < 8) {
       setErro("A nova senha precisa ter pelo menos 8 caracteres.");
@@ -38,7 +102,8 @@ export default function ResetarSenhaPage() {
     });
 
     if (error) {
-      setErro("Não foi possível atualizar a senha. Abra novamente o link de recuperação enviado por e-mail.");
+      console.error("Erro ao atualizar senha:", error);
+      setErro("Não foi possível atualizar a senha. Solicite uma nova recuperação e tente novamente.");
       setCarregando(false);
       return;
     }
@@ -49,6 +114,33 @@ export default function ResetarSenhaPage() {
       router.push("/login");
     }, 1400);
   }
+
+  useEffect(() => {
+    const emailInicial = emailUrl.trim().toLowerCase();
+    const tokenInicial = limparCodigo(tokenUrl);
+
+    if (!emailInicial || tokenInicial.length !== 6) return;
+
+    let ativo = true;
+
+    async function validarLink() {
+      setValidandoAutomatico(true);
+      const ok = await validarCodigo(tokenInicial, emailInicial);
+      if (ativo) {
+        setValidandoAutomatico(false);
+        if (ok) {
+          window.history.replaceState(null, "", "/resetar-senha");
+        }
+      }
+    }
+
+    validarLink();
+
+    return () => {
+      ativo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-100 px-4 py-8 text-slate-950">
@@ -75,80 +167,184 @@ export default function ResetarSenhaPage() {
           </h1>
 
           <p className="mt-2 text-sm text-slate-600">
-            Crie uma nova senha para acessar o sistema.
+            {etapa === "codigo"
+              ? "Informe o código recebido por e-mail para continuar."
+              : "Crie uma nova senha para acessar o sistema."}
           </p>
         </div>
 
-        <form onSubmit={salvarNovaSenha} className="space-y-4">
-          <div>
-            <label
-              htmlFor="senha"
-              className="mb-2 block text-sm font-semibold text-slate-800"
-            >
-              Nova senha
-            </label>
-
-            <input
-              id="senha"
-              type="password"
-              value={senha}
-              onChange={(event) => setSenha(event.target.value)}
-              required
-              autoComplete="new-password"
-              placeholder="Digite a nova senha"
-              className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="confirmarSenha"
-              className="mb-2 block text-sm font-semibold text-slate-800"
-            >
-              Confirmar nova senha
-            </label>
-
-            <input
-              id="confirmarSenha"
-              type="password"
-              value={confirmarSenha}
-              onChange={(event) => setConfirmarSenha(event.target.value)}
-              required
-              autoComplete="new-password"
-              placeholder="Digite novamente"
-              className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
-            />
-          </div>
-
-          {erro ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-              {erro}
-            </div>
-          ) : null}
-
-          {sucesso ? (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-              {sucesso}
-            </div>
-          ) : null}
-
-          <button
-            type="submit"
-            disabled={carregando}
-            className="h-12 w-full rounded-xl bg-blue-700 px-4 text-sm font-bold text-white shadow-[0_14px_30px_rgba(29,78,216,0.26)] transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:shadow-none"
+        {etapa === "codigo" ? (
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              validarCodigo();
+            }}
+            className="space-y-4"
           >
-            {carregando ? "Salvando..." : "Salvar nova senha"}
-          </button>
+            <div>
+              <label htmlFor="email" className="mb-2 block text-sm font-semibold text-slate-800">
+                E-mail
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+                autoComplete="email"
+                placeholder="seu@email.com"
+                className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+              />
+            </div>
 
-          <button
-            type="button"
-            onClick={() => router.push("/login")}
-            className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
-          >
-            Voltar para o login
-          </button>
-        </form>
+            <div>
+              <label htmlFor="codigo" className="mb-2 block text-sm font-semibold text-slate-800">
+                Código de 6 dígitos
+              </label>
+              <input
+                id="codigo"
+                inputMode="numeric"
+                value={codigo}
+                onChange={(event) => setCodigo(limparCodigo(event.target.value))}
+                required
+                placeholder="Digite o código"
+                className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-center text-lg font-black tracking-[0.35em] text-slate-950 outline-none transition placeholder:text-sm placeholder:font-normal placeholder:tracking-normal placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+              />
+            </div>
+
+            {erro ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {erro}
+              </div>
+            ) : null}
+
+            {sucesso ? (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+                {sucesso}
+              </div>
+            ) : null}
+
+            <button
+              type="submit"
+              disabled={carregando || validandoAutomatico || !codigoCompleto}
+              className="h-12 w-full rounded-xl bg-blue-700 px-4 text-sm font-bold text-white shadow-[0_14px_30px_rgba(29,78,216,0.26)] transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:shadow-none"
+            >
+              {validandoAutomatico || carregando ? "Validando..." : "Validar código"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => router.push("/login")}
+              className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+            >
+              Voltar para o login
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={salvarNovaSenha} className="space-y-4">
+            <div>
+              <label htmlFor="senha" className="mb-2 block text-sm font-semibold text-slate-800">
+                Nova senha
+              </label>
+              <div className="relative">
+                <input
+                  id="senha"
+                  type={mostrarSenha ? "text" : "password"}
+                  value={senha}
+                  onChange={(event) => setSenha(event.target.value)}
+                  required
+                  autoComplete="new-password"
+                  placeholder="Digite a nova senha"
+                  className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 pr-12 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                />
+                <button
+                  type="button"
+                  aria-label={mostrarSenha ? "Ocultar nova senha" : "Mostrar nova senha"}
+                  title={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
+                  onClick={() => setMostrarSenha((valorAtual) => !valorAtual)}
+                  className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 transition hover:bg-blue-50 hover:text-blue-700"
+                >
+                  {mostrarSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="confirmarSenha" className="mb-2 block text-sm font-semibold text-slate-800">
+                Confirmar nova senha
+              </label>
+              <div className="relative">
+                <input
+                  id="confirmarSenha"
+                  type={mostrarConfirmarSenha ? "text" : "password"}
+                  value={confirmarSenha}
+                  onChange={(event) => setConfirmarSenha(event.target.value)}
+                  required
+                  autoComplete="new-password"
+                  placeholder="Digite novamente"
+                  className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 pr-12 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                />
+                <button
+                  type="button"
+                  aria-label={mostrarConfirmarSenha ? "Ocultar confirmação de senha" : "Mostrar confirmação de senha"}
+                  title={mostrarConfirmarSenha ? "Ocultar senha" : "Mostrar senha"}
+                  onClick={() => setMostrarConfirmarSenha((valorAtual) => !valorAtual)}
+                  className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 transition hover:bg-blue-50 hover:text-blue-700"
+                >
+                  {mostrarConfirmarSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            {erro ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {erro}
+              </div>
+            ) : null}
+
+            {sucesso ? (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+                {sucesso}
+              </div>
+            ) : null}
+
+            <button
+              type="submit"
+              disabled={carregando}
+              className="h-12 w-full rounded-xl bg-blue-700 px-4 text-sm font-bold text-white shadow-[0_14px_30px_rgba(29,78,216,0.26)] transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:shadow-none"
+            >
+              {carregando ? "Salvando..." : "Salvar nova senha"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setEtapa("codigo")}
+              className="h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+            >
+              Voltar para o código
+            </button>
+          </form>
+        )}
       </section>
     </main>
+  );
+}
+
+export default function ResetarSenhaPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="relative flex min-h-screen items-center justify-center bg-slate-100 px-4 py-8 text-slate-950">
+          <section className="w-full max-w-[470px] rounded-[28px] border border-white/80 bg-white px-6 py-8 text-center shadow-[0_28px_90px_rgba(15,23,42,0.18)] sm:px-10">
+            <div className="mx-auto mb-5 flex justify-center">
+              <Image src="/logo.png" alt="Flow Sales CRM" width={68} height={68} priority className="h-[68px] w-[68px] object-contain" />
+            </div>
+            <p className="text-sm font-semibold text-slate-600">Carregando recuperação...</p>
+          </section>
+        </main>
+      }
+    >
+      <ResetarSenhaContent />
+    </Suspense>
   );
 }
