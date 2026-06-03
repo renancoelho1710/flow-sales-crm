@@ -1,235 +1,353 @@
 "use client";
-import type React from "react";
 
 import Image from "next/image";
 import Link from "next/link";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { NotificacoesPopup } from "@/components/dashboard/NotificacoesPopup";
 import {
+  BarChart3,
   Bell,
   CalendarDays,
   Car,
   ChevronDown,
-  ClipboardList,
-  FileBarChart,
-  Headphones,
+  ChevronRight,
+  ClipboardCheck,
   LayoutDashboard,
   LogOut,
-  Megaphone,
+  Menu,
   PhoneCall,
   Search,
   Settings,
-  ShieldCheck,
+  Store,
+  UserCog,
   Users,
   WalletCards,
+  X,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 
-type UsuarioShell = {
+type Usuario = {
+  id?: string;
   nome: string;
-  email: string;
+  email?: string | null;
   perfil: string;
+  ativo?: boolean;
   avatar_url?: string | null;
   status_operacional?: string | null;
   status_administrativo?: string | null;
 };
 
-type MenuChild = {
-  id: string;
+type DashboardShellProps = {
+  usuario: Usuario;
+  activeTab?: string;
+  children: ReactNode;
+};
+
+type ConfigItem = {
+  chave: string;
+  valor: Record<string, any>;
+};
+
+type ConfiguracoesApi = {
+  ok: boolean;
+  configuracoes?: {
+    sistema?: ConfigItem[];
+    perfil?: ConfigItem[];
+    usuario?: ConfigItem[];
+  };
+};
+
+type SubItem = {
   label: string;
+  tab: string;
   href: string;
+  perfis?: string[];
 };
 
 type MenuItem = {
-  id: string;
   label: string;
   icon: React.ElementType;
-  href?: string;
-  children?: MenuChild[];
+  tab: string;
+  href: string;
+  perfis?: string[];
+  subitems: SubItem[];
 };
 
 const menuItems: MenuItem[] = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   {
-    id: "crm",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    tab: "dashboard-geral",
+    href: "/dashboard",
+    subitems: [
+      { label: "Visão geral", tab: "dashboard-geral", href: "/dashboard" },
+      { label: "Operacional", tab: "dashboard-operacional", href: "/dashboard?visao=operacional" },
+      { label: "Estratégico", tab: "dashboard-estrategico", href: "/dashboard?visao=estrategico", perfis: ["adm", "admin", "suporte", "gerente", "supervisor"] },
+    ],
+  },
+  {
     label: "CRM de leads",
     icon: Users,
-    children: [
-      { id: "leads", label: "Leads ativos", href: "/dashboard/leads" },
-      { id: "kanban", label: "Kanban", href: "/dashboard/kanban" },
-      { id: "distribuicao", label: "Distribuição", href: "/dashboard/distribuicao" },
-      { id: "c2s", label: "Importação C2S", href: "/dashboard/c2s" },
+    tab: "leads-ativos",
+    href: "/dashboard/leads",
+    subitems: [
+      { label: "Leads ativos", tab: "leads-ativos", href: "/dashboard/leads" },
+      { label: "Minhas tarefas", tab: "leads-tarefas", href: "/dashboard/leads/tarefas" },
+      { label: "Novo lead", tab: "novo-lead", href: "/dashboard/leads/novo", perfis: ["adm", "admin", "suporte", "gerente", "supervisor"] },
+      { label: "Solicitações", tab: "solicitacoes-leads", href: "/dashboard/leads/solicitacoes", perfis: ["adm", "admin", "suporte", "gerente", "supervisor"] },
+      { label: "Importar base", tab: "importar-base", href: "/dashboard/c2s", perfis: ["adm", "admin", "suporte", "gerente", "supervisor"] },
+      { label: "Arquivados", tab: "leads-arquivados", href: "/dashboard/leads?filtro=arquivados", perfis: ["adm", "admin", "suporte", "gerente", "supervisor"] },
     ],
   },
   {
-    id: "3cx",
+    label: "Kanban",
+    icon: WalletCards,
+    tab: "kanban-funil",
+    href: "/dashboard/kanban",
+    subitems: [
+      { label: "Funil completo", tab: "kanban-funil", href: "/dashboard/kanban" },
+      { label: "Minhas oportunidades", tab: "kanban-minhas", href: "/dashboard/kanban?visao=minhas" },
+      { label: "Vendas pendentes", tab: "kanban-vendas-pendentes", href: "/dashboard/kanban?filtro=vendas-pendentes" },
+      { label: "Configurar funil", tab: "kanban-configuracoes", href: "/dashboard/kanban/configuracoes", perfis: ["adm", "admin", "suporte", "gerente", "supervisor"] },
+    ],
+  },
+  {
+    label: "Agenda",
+    icon: CalendarDays,
+    tab: "agenda-hoje",
+    href: "/dashboard/agenda",
+    subitems: [
+      { label: "Hoje", tab: "agenda-hoje", href: "/dashboard/agenda" },
+      { label: "Semana", tab: "agenda-semana", href: "/dashboard/agenda?periodo=semana" },
+      { label: "Mês", tab: "agenda-mes", href: "/dashboard/agenda?periodo=mes" },
+    ],
+  },
+  {
     label: "Controle 3CX",
     icon: PhoneCall,
-    children: [
-      { id: "monitor", label: "Ligações 3CX", href: "/dashboard/3cx" },
-      { id: "classificacao", label: "Classificação", href: "/dashboard/3cx/classificacoes" },
-      { id: "historico", label: "Histórico", href: "/dashboard/3cx/historico" },
-      { id: "whatsapp", label: "Monitor WhatsApp", href: "/dashboard/3cx/whatsapp" },
+    tab: "controle-3cx",
+    href: "/dashboard/3cx",
+    subitems: [
+      { label: "Monitor", tab: "controle-3cx", href: "/dashboard/3cx" },
+      { label: "Ligações", tab: "ligacoes-3cx", href: "/dashboard/3cx?aba=ligacoes" },
+      { label: "Histórico", tab: "historico-3cx", href: "/dashboard/3cx/historico" },
+      { label: "Classificações", tab: "classificacoes-3cx", href: "/dashboard/3cx/classificacoes" },
+      { label: "Monitor WhatsApp", tab: "whatsapp-3cx", href: "/dashboard/3cx/whatsapp" },
     ],
   },
   {
-    id: "agenda",
-    label: "Agendamentos",
-    icon: CalendarDays,
-    children: [
-      { id: "agenda-hoje", label: "Agenda de hoje", href: "/dashboard/agendamentos" },
-      { id: "calendario", label: "Calendário", href: "/dashboard/agendamentos/calendario" },
-    ],
-  },
-  {
-    id: "campanhas",
     label: "Campanhas",
-    icon: Megaphone,
-    children: [
-      { id: "campanhas-lista", label: "Campanhas", href: "/dashboard/campanhas" },
-      { id: "mensagens", label: "Mensagens", href: "/dashboard/campanhas/mensagens" },
+    icon: Store,
+    tab: "campanhas-ativas",
+    href: "/dashboard/campanhas",
+    subitems: [
+      { label: "Campanhas ativas", tab: "campanhas-ativas", href: "/dashboard/campanhas" },
+      { label: "Criar campanha", tab: "criar-campanha", href: "/dashboard/campanhas?acao=nova", perfis: ["adm", "admin", "suporte", "gerente", "supervisor"] },
+      { label: "Mensagens", tab: "mensagens-campanha", href: "/dashboard/campanhas?aba=mensagens" },
     ],
   },
-  { id: "simulador", label: "Simulador", icon: WalletCards, href: "/dashboard/simulador" },
   {
-    id: "conferencia",
-    label: "Conferência",
+    label: "Simulador",
     icon: Car,
-    children: [
-      { id: "veiculos", label: "Veículos", href: "/dashboard/conferencia" },
-      { id: "divergencias", label: "Divergências", href: "/dashboard/conferencia/divergencias" },
+    tab: "simulador",
+    href: "/dashboard/simulador",
+    subitems: [
+      { label: "Nova simulação", tab: "simulador", href: "/dashboard/simulador" },
+      { label: "Simulações salvas", tab: "simulacoes-salvas", href: "/dashboard/simulador?aba=salvas" },
     ],
   },
   {
-    id: "relatorios",
+    label: "Conferência",
+    icon: ClipboardCheck,
+    tab: "conferencia-veiculos",
+    href: "/dashboard/conferencia",
+    subitems: [
+      { label: "Veículos", tab: "conferencia-veiculos", href: "/dashboard/conferencia" },
+      { label: "Divergências", tab: "conferencia-divergencias", href: "/dashboard/conferencia?filtro=divergencias" },
+      { label: "Aceitos", tab: "conferencia-aceitos", href: "/dashboard/conferencia?filtro=aceitos" },
+    ],
+  },
+  {
     label: "Relatórios",
-    icon: FileBarChart,
-    children: [
-      { id: "operacional", label: "Operacional", href: "/dashboard/relatorios" },
-      { id: "graficos", label: "Gráficos", href: "/dashboard/relatorios/graficos" },
+    icon: BarChart3,
+    tab: "relatorios",
+    href: "/dashboard/relatorios",
+    perfis: ["adm", "admin", "suporte", "gerente", "supervisor"],
+    subitems: [
+      { label: "Geral", tab: "relatorios", href: "/dashboard/relatorios" },
+      { label: "Equipe", tab: "relatorios-equipe", href: "/dashboard/relatorios?aba=equipe" },
+      { label: "Unidades", tab: "relatorios-unidades", href: "/dashboard/relatorios?aba=unidades" },
     ],
   },
   {
-    id: "usuarios",
     label: "Usuários",
-    icon: ShieldCheck,
-    children: [
-      { id: "colaboradores", label: "Colaboradores", href: "/dashboard/usuarios" },
-      { id: "permissoes", label: "Permissões", href: "/dashboard/usuarios/permissoes" },
+    icon: UserCog,
+    tab: "usuarios",
+    href: "/dashboard/usuarios",
+    perfis: ["adm", "admin", "suporte", "gerente", "supervisor"],
+    subitems: [
+      { label: "Todos", tab: "usuarios", href: "/dashboard/usuarios" },
+      { label: "Perfis", tab: "usuarios-perfis", href: "/dashboard/usuarios/permissoes" },
+      { label: "Status", tab: "usuarios-status", href: "/dashboard/usuarios?aba=status" },
     ],
   },
-  { id: "configuracoes", label: "Configurações", icon: Settings, href: "/dashboard/configuracoes" },
+  {
+    label: "Configurações",
+    icon: Settings,
+    tab: "configuracoes",
+    href: "/dashboard/configuracoes",
+    subitems: [
+      { label: "Geral", tab: "configuracoes", href: "/dashboard/configuracoes" },
+      { label: "Tema", tab: "configuracoes-tema", href: "/dashboard/configuracoes?aba=tema" },
+      { label: "Notificações", tab: "configuracoes-notificacoes", href: "/dashboard/configuracoes?aba=notificacoes" },
+      { label: "Operação e pausas", tab: "configuracoes-operacao-pausas", href: "/dashboard/configuracoes/operacao-pausas", perfis: ["adm", "admin", "suporte"] },
+      { label: "CRM e leads", tab: "configuracoes-leads", href: "/dashboard/configuracoes?aba=leads", perfis: ["adm", "admin", "suporte", "gerente", "supervisor"] },
+      { label: "Agenda", tab: "configuracoes-agenda", href: "/dashboard/configuracoes/agenda", perfis: ["adm", "admin", "suporte", "gerente", "supervisor"] },
+      { label: "Kanban", tab: "configuracoes-kanban", href: "/dashboard/configuracoes/kanban", perfis: ["adm", "admin", "suporte", "gerente", "supervisor"] },
+      { label: "Integrações", tab: "configuracoes-integracoes", href: "/dashboard/configuracoes/integracoes", perfis: ["adm", "admin", "suporte"] },
+      { label: "API", tab: "configuracoes-api", href: "/dashboard/configuracoes/api", perfis: ["adm", "admin", "suporte"] },
+      { label: "Auditoria", tab: "configuracoes-auditoria", href: "/dashboard/configuracoes/auditoria", perfis: ["adm", "admin", "suporte"] },
+    ],
+  },
 ];
 
-function statusConfig(usuario: UsuarioShell) {
-  if (usuario.status_administrativo && usuario.status_administrativo !== "disponivel") {
-    const map: Record<string, { label: string; color: string }> = {
-      ferias: { label: "Férias", color: "bg-orange-500" },
-      atestado: { label: "Atestado", color: "bg-orange-500" },
-      feedback: { label: "Feedback", color: "bg-orange-500" },
-      ausente_administrativo: { label: "Ausente", color: "bg-slate-300" },
-      bloqueado: { label: "Bloqueado", color: "bg-red-600" },
-    };
-    return map[usuario.status_administrativo] || { label: "Ausente", color: "bg-slate-300" };
+function normalizarPerfil(perfil?: string | null) {
+  return String(perfil || "").trim().toLowerCase();
+}
+
+function podeVer(perfil: string, perfis?: string[]) {
+  if (!perfis || perfis.length === 0) return true;
+  return perfis.includes(normalizarPerfil(perfil));
+}
+
+function hrefAtivo(pathname: string, href: string) {
+  const base = href.split("?")[0];
+  if (base === "/dashboard") return pathname === "/dashboard";
+  return pathname === base || pathname.startsWith(`${base}/`);
+}
+
+function buscarValor(configs: ConfigItem[] | undefined, chave: string, fallback: Record<string, any>) {
+  return configs?.find((item) => item.chave === chave)?.valor || fallback;
+}
+
+function resolverTema(temaUsuario: string, temaGlobal: string) {
+  const preferenciaUsuario = temaUsuario || "sistema";
+  const preferenciaGlobal = temaGlobal || "claro";
+  const temaBase = preferenciaUsuario === "sistema" ? preferenciaGlobal : preferenciaUsuario;
+  const acompanhaSistema = ["sistema", "acompanhar_sistema", "acompanhar sistema"].includes(String(temaBase).toLowerCase());
+
+  if (acompanhaSistema && typeof window !== "undefined") {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "escuro" : "claro";
   }
 
-  const map: Record<string, { label: string; color: string }> = {
-    disponivel: { label: "Disponível", color: "bg-emerald-500" },
-    em_ligacao: { label: "Ocupado", color: "bg-red-600" },
-    em_atendimento: { label: "Em atendimento", color: "bg-blue-600" },
-    ausente: { label: "Ausente", color: "bg-orange-500" },
-    offline: { label: "Offline", color: "bg-slate-300" },
+  return temaBase === "escuro" ? "escuro" : "claro";
+}
+
+function aplicarTemaNoDocumento({ tema, densidade, corPrincipal, fonte }: { tema: string; densidade: string; corPrincipal: string; fonte: string }) {
+  if (typeof document === "undefined") return;
+
+  const root = document.documentElement;
+  root.classList.remove("flow-theme-claro", "flow-theme-escuro");
+  root.classList.add(tema === "escuro" ? "flow-theme-escuro" : "flow-theme-claro");
+
+  root.classList.remove("flow-density-compacta", "flow-density-confortavel", "flow-density-ampla");
+  root.classList.add(`flow-density-${densidade || "confortavel"}`);
+
+  root.classList.remove("flow-font-padrao", "flow-font-grande", "flow-font-compacta");
+  root.classList.add(`flow-font-${fonte || "padrao"}`);
+
+  root.dataset.flowTheme = tema;
+  root.dataset.flowColor = corPrincipal || "blue";
+}
+
+
+function statusLabelTopo(status?: string | null) {
+  const mapa: Record<string, string> = {
+    disponivel: "Disponível",
+    offline: "Offline",
+    ocupado: "Ocupado",
+    em_atendimento: "Em atendimento",
+    em_ligacao: "Em ligação",
+    pausa_almoco: "Pausa almoço",
+    pausa_feedback: "Pausa feedback",
+    bloqueado: "Bloqueado",
   };
 
-  return map[usuario.status_operacional || "offline"] || map.offline;
+  return mapa[String(status || "").toLowerCase()] || "Offline";
 }
 
-function iniciais(nome: string) {
-  return nome
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((parte) => parte[0]?.toUpperCase())
-    .join("") || "FS";
+function statusDotClass(status?: string | null) {
+  const valor = String(status || "").toLowerCase();
+
+  if (valor === "disponivel") return "bg-emerald-500";
+  if (["em_atendimento"].includes(valor)) return "bg-blue-500";
+  if (["ocupado", "em_ligacao", "pausa_feedback", "pausa_almoco"].includes(valor)) return "bg-amber-500";
+  if (["bloqueado", "offline"].includes(valor)) return "bg-red-500";
+
+  return "bg-slate-300";
 }
 
-
-const lojas = ["Todas as lojas", "Loja 1", "Loja 2", "Loja 3", "Loja 4", "Premium"];
-
-const notificacoes = [
-  { titulo: "Leads sem contato", detalhe: "142 leads aguardam retorno há mais de 3 dias", href: "/dashboard/leads?filtro=sem-contato" },
-  { titulo: "Propostas pendentes", detalhe: "27 propostas precisam de validação", href: "/dashboard/kanban?etapa=venda-pendente" },
-  { titulo: "Agendamentos de hoje", detalhe: "28 compromissos previstos para hoje", href: "/dashboard/agenda" },
-];
-
-export function DashboardShell({ children, usuario }: { children: React.ReactNode; usuario: UsuarioShell }) {
+export function DashboardShell({ usuario, activeTab = "dashboard-geral", children }: DashboardShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
-  const menuRef = useRef<HTMLDivElement | null>(null);
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-  const scrollTimerRef = useRef<number | null>(null);
-  const [menuAberto, setMenuAberto] = useState(false);
-  const [submenusAbertos, setSubmenusAbertos] = useState<Record<string, boolean>>({});
+  const menuContentRef = useRef<HTMLDivElement | null>(null);
+
+  const [menuAberto, setMenuAberto] = useState(true);
+  const [openMenus, setOpenMenus] = useState<string[]>([]);
   const [buscaGlobal, setBuscaGlobal] = useState("");
-  const [lojaSelecionada, setLojaSelecionada] = useState("Todas as lojas");
-  const [lojasAbertas, setLojasAbertas] = useState(false);
-  const [notificacoesAbertas, setNotificacoesAbertas] = useState(false);
-  const [perfilAberto, setPerfilAberto] = useState(false);
-  const status = statusConfig(usuario);
+  const [dropdownAberto, setDropdownAberto] = useState<"notificacoes" | "avatar" | "usuarios" | null>(null);
+  const [totalNotificacoes, setTotalNotificacoes] = useState(0);
+  const [statusOperacional, setStatusOperacional] = useState(usuario.status_operacional || "offline");
+  const [salvandoStatus, setSalvandoStatus] = useState(false);
+
+  const perfil = normalizarPerfil(usuario.perfil);
+
+  const itensVisiveis = useMemo(() => {
+    return menuItems
+      .filter((item) => podeVer(perfil, item.perfis))
+      .map((item) => ({
+        ...item,
+        subitems: item.subitems.filter((subitem) => podeVer(perfil, subitem.perfis)),
+      }));
+  }, [perfil]);
 
   function fecharMenu() {
     setMenuAberto(false);
-    setSubmenusAbertos({});
+    setOpenMenus([]);
   }
 
-  function hrefAtivo(href: string) {
-  if (href === "/dashboard/3cx") {
-    return pathname === "/dashboard/3cx";
-  }
-
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
-
-function itemAtivo(item: MenuItem) {
-    if (item.href && hrefAtivo(item.href)) return true;
-    return Boolean(item.children?.some((child) => hrefAtivo(child.href)));
-  }
-
-  function alternarSubmenu(id: string) {
+  function toggleMenu(label: string) {
     setMenuAberto(true);
-    setSubmenusAbertos((atual) => ({ ...atual, [id]: !atual[id] }));
+    setOpenMenus((current) =>
+      current.includes(label) ? current.filter((item) => item !== label) : [...current, label]
+    );
   }
 
-  function iniciarScrollMenu(direcao: "cima" | "baixo") {
-    if (scrollTimerRef.current) window.clearInterval(scrollTimerRef.current);
-    scrollTimerRef.current = window.setInterval(() => {
-      scrollRef.current?.scrollBy({ top: direcao === "baixo" ? 12 : -12 });
-    }, 16);
-  }
+  function handleMenuAutoScroll(event: React.MouseEvent<HTMLDivElement>) {
+    const menu = menuContentRef.current;
+    if (!menu) return;
 
-  function pararScrollMenu() {
-    if (scrollTimerRef.current) window.clearInterval(scrollTimerRef.current);
-    scrollTimerRef.current = null;
-  }
+    const rect = menu.getBoundingClientRect();
+    const distanceFromTop = event.clientY - rect.top;
+    const distanceFromBottom = rect.bottom - event.clientY;
+    const edgeSize = 88;
 
-  function pesquisarGlobal(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const termo = buscaGlobal.trim();
-
-    if (!termo) {
-      router.push("/dashboard/leads");
+    if (distanceFromBottom < edgeSize) {
+      menu.scrollTop += 16;
       return;
     }
 
-    router.push(`/dashboard/leads?busca=${encodeURIComponent(termo)}`);
+    if (distanceFromTop < edgeSize) {
+      menu.scrollTop -= 16;
+    }
   }
 
-  function escolherLoja(loja: string) {
-    setLojaSelecionada(loja);
-    setLojasAbertas(false);
-    const parametro = loja === "Todas as lojas" ? "" : `?loja=${encodeURIComponent(loja)}`;
-    router.push(`/dashboard/leads${parametro}`);
+  function executarBusca() {
+    const termo = buscaGlobal.trim();
+    if (!termo) return;
+    router.push(`/dashboard/leads?busca=${encodeURIComponent(termo)}`);
   }
 
   async function sair() {
@@ -238,243 +356,405 @@ function itemAtivo(item: MenuItem) {
     router.refresh();
   }
 
+  async function carregarConfiguracoesVisuais() {
+    try {
+      const resposta = await fetch("/api/configuracoes", { method: "GET", cache: "no-store" });
+      const dados = (await resposta.json().catch(() => null)) as ConfiguracoesApi | null;
+      if (!resposta.ok || !dados?.ok) return;
+
+      const aparenciaGlobal = buscarValor(dados.configuracoes?.sistema, "aparencia_global", {
+        tema_padrao: "claro",
+        cor_principal: "blue",
+        densidade: "confortavel",
+        menu_padrao: "aberto",
+        fonte: "padrao",
+      });
+
+      const preferenciasUsuario = buscarValor(dados.configuracoes?.usuario, "preferencias_usuario", {
+        tema: "sistema",
+        densidade: "confortavel",
+        som_ativo: true,
+        volume: 100,
+        menu_aberto: true,
+      });
+
+      const temaFinal = resolverTema(String(preferenciasUsuario.tema || "sistema"), String(aparenciaGlobal.tema_padrao || "claro"));
+      const densidadeFinal = String(preferenciasUsuario.densidade || aparenciaGlobal.densidade || "confortavel");
+      const fonteFinal = String(aparenciaGlobal.fonte || "padrao");
+      const corPrincipal = String(aparenciaGlobal.cor_principal || "blue");
+
+      aplicarTemaNoDocumento({ tema: temaFinal, densidade: densidadeFinal, corPrincipal, fonte: fonteFinal });
+      setMenuAberto(Boolean(preferenciasUsuario.menu_aberto ?? aparenciaGlobal.menu_padrao !== "fechado"));
+    } catch {
+      aplicarTemaNoDocumento({ tema: "claro", densidade: "confortavel", corPrincipal: "blue", fonte: "padrao" });
+    }
+  }
+
   useEffect(() => {
-    function aoClicarFora(event: MouseEvent) {
-      if (!menuRef.current) return;
-      if (!menuRef.current.contains(event.target as Node)) fecharMenu();
+    carregarConfiguracoesVisuais();
+
+    function recarregar() {
+      carregarConfiguracoesVisuais();
     }
 
-    document.addEventListener("mousedown", aoClicarFora);
-    return () => document.removeEventListener("mousedown", aoClicarFora);
+    window.addEventListener("flow-configuracoes-atualizadas", recarregar);
+
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    media.addEventListener?.("change", recarregar);
+
+    return () => {
+      window.removeEventListener("flow-configuracoes-atualizadas", recarregar);
+      media.removeEventListener?.("change", recarregar);
+    };
   }, []);
 
   useEffect(() => {
-    return () => pararScrollMenu();
+    const ativo = itensVisiveis.find((item) => item.subitems.some((sub) => hrefAtivo(pathname, sub.href)) || hrefAtivo(pathname, item.href));
+    if (ativo) setOpenMenus((current) => Array.from(new Set([...current, ativo.label])));
+  }, [pathname, itensVisiveis]);
+
+
+  async function carregarMeuStatus() {
+    try {
+      const resposta = await fetch("/api/usuarios/me/status", { method: "GET", cache: "no-store" });
+      const json = await resposta.json().catch(() => null);
+      if (!resposta.ok || !json?.ok) return;
+      setStatusOperacional(json.usuario?.status_operacional || "offline");
+    } catch {
+      // Mantém o status atual na tela.
+    }
+  }
+
+  async function alterarMeuStatus(status: "disponivel" | "offline" | "ocupado") {
+    setSalvandoStatus(true);
+
+    try {
+      const resposta = await fetch("/api/usuarios/me/status", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+
+      const json = await resposta.json().catch(() => null);
+
+      if (!resposta.ok || !json?.ok) {
+        alert(json?.erro || "Não foi possível alterar seu status.");
+        return;
+      }
+
+      setStatusOperacional(json.usuario?.status_operacional || status);
+      window.dispatchEvent(new Event("flow-status-atualizado"));
+    } catch {
+      alert("Não foi possível alterar seu status.");
+    } finally {
+      setSalvandoStatus(false);
+    }
+  }
+
+  useEffect(() => {
+    carregarMeuStatus();
+
+    function recarregarStatus() {
+      carregarMeuStatus();
+    }
+
+    window.addEventListener("flow-status-atualizado", recarregarStatus);
+
+    return () => {
+      window.removeEventListener("flow-status-atualizado", recarregarStatus);
+    };
   }, []);
 
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-950">
+    <div className="flow-shell min-h-screen bg-slate-50 text-slate-950">
       <aside
-        ref={menuRef}
+        onClick={(event) => event.stopPropagation()}
         onMouseEnter={() => setMenuAberto(true)}
         onMouseLeave={fecharMenu}
-        className={`fixed left-0 top-0 z-40 h-screen border-r border-slate-200 bg-white shadow-xl shadow-slate-200/60 transition-all duration-300 ${menuAberto ? "w-[282px]" : "w-[82px]"}`}
+        className={`fixed inset-y-0 left-0 z-40 hidden border-r border-slate-200 bg-white shadow-sm transition-all duration-300 lg:block ${
+          menuAberto ? "w-[250px]" : "w-[76px]"
+        }`}
       >
         <div className="flex h-full flex-col">
-          <div className="flex h-[78px] items-center justify-center border-b border-slate-200 px-4">
-            {menuAberto ? (
-              <Image src="/logo-slogan.png" alt="Flow Sales CRM" width={184} height={58} priority className="h-auto w-[184px] object-contain" />
-            ) : (
-              <Image src="/logo.png" alt="Flow Sales CRM" width={42} height={42} priority className="h-[42px] w-[42px] object-contain" />
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={() => setMenuAberto(true)}
+            className={`flex h-[76px] items-center border-b border-slate-100 px-4 ${
+              menuAberto ? "justify-start" : "justify-center"
+            }`}
+          >
+            <Image
+  src={menuAberto ? "/logo-slogan.png" : "/logo.png"}
+  alt="Flow Sales CRM"
+  width={menuAberto ? 170 : 36}
+  height={menuAberto ? 52 : 36}
+  priority
+  style={menuAberto ? { width: "170px", height: "auto" } : { width: "36px", height: "36px" }}
+  className="object-contain app-shell-logo"
+/>
+          </button>
 
-          <div className="relative flex-1 overflow-hidden py-3">
-            <div onMouseEnter={() => iniciarScrollMenu("cima")} onMouseLeave={pararScrollMenu} className="absolute left-0 top-0 z-10 h-8 w-full" />
-            <div ref={scrollRef} className="h-full overflow-y-auto px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <nav className="space-y-1 pb-8 pt-2">
-                {menuItems.map((item) => {
-                  const Icon = item.icon;
-                  const ativo = itemAtivo(item);
-                  const temFilhos = Boolean(item.children?.length);
-                  const aberto = Boolean(submenusAbertos[item.id]);
+          <nav
+            ref={menuContentRef}
+            onMouseMove={handleMenuAutoScroll}
+            className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            <div className="space-y-1.5">
+              {itensVisiveis.map((item) => {
+                const Icon = item.icon;
+                const isActive = item.subitems.some((sub) => hrefAtivo(pathname, sub.href)) || activeTab === item.tab || hrefAtivo(pathname, item.href);
+                const isOpen = openMenus.includes(item.label);
 
-                  if (temFilhos) {
-                    return (
-                      <div key={item.id}>
-                        <button
-                          type="button"
-                          onClick={() => alternarSubmenu(item.id)}
-                          className={`flex h-11 w-full items-center rounded-xl px-3 text-sm font-semibold transition ${ativo ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"} ${menuAberto ? "justify-between" : "justify-center"}`}
-                          title={!menuAberto ? item.label : undefined}
-                        >
-                          <span className={`flex items-center ${menuAberto ? "gap-3" : "gap-0"}`}>
-                            <Icon className="h-5 w-5 shrink-0" strokeWidth={1.8} />
-                            {menuAberto ? <span>{item.label}</span> : null}
-                          </span>
-                          {menuAberto ? <ChevronDown className={`h-4 w-4 transition ${aberto ? "rotate-180" : ""}`} /> : null}
-                        </button>
-
-                        {menuAberto && aberto ? (
-                          <div className="ml-8 mt-1 space-y-1 border-l border-slate-200 pl-3">
-                            {item.children?.map((child) => {
-                              const childAtivo = hrefAtivo(child.href);
-                              return (
-                                <Link key={child.id} href={child.href} className={`block rounded-lg px-3 py-2 text-sm font-medium transition ${childAtivo ? "bg-slate-100 text-blue-700 font-bold" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"}`}>
-                                  {child.label}
-                                </Link>
-                              );
-                            })}
-                          </div>
-                        ) : null}
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <Link
-                      key={item.id}
-                      href={item.href || "#"}
-                      className={`flex h-11 items-center rounded-xl px-3 text-sm font-semibold transition ${ativo ? "bg-blue-700 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"} ${menuAberto ? "justify-start gap-3" : "justify-center"}`}
-                      title={!menuAberto ? item.label : undefined}
+                return (
+                  <div key={item.label}>
+                    <button
+                      type="button"
+                      onClick={() => toggleMenu(item.label)}
+                      className={`flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold transition ${
+                        isActive
+                          ? "bg-blue-700 text-white shadow-sm shadow-blue-700/20"
+                          : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                      } ${menuAberto ? "justify-start" : "justify-center"}`}
+                      title={item.label}
                     >
-                      <Icon className="h-5 w-5 shrink-0" strokeWidth={1.8} />
-                      {menuAberto ? <span>{item.label}</span> : null}
-                    </Link>
-                  );
-                })}
-              </nav>
-            </div>
-            <div onMouseEnter={() => iniciarScrollMenu("baixo")} onMouseLeave={pararScrollMenu} className="absolute bottom-0 left-0 z-10 h-10 w-full" />
-          </div>
+                      <Icon className="h-5 w-5 shrink-0" />
+                      {menuAberto ? <span className="flex-1 text-left">{item.label}</span> : null}
+                      {menuAberto ? isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" /> : null}
+                    </button>
 
-          <div className="border-t border-slate-200 p-3">
+                    {menuAberto && isOpen ? (
+                      <div className="ml-6 mt-1 space-y-1 border-l border-slate-200 pl-3">
+                        {item.subitems.map((subitem) => {
+                          const childAtivo = hrefAtivo(pathname, subitem.href) || activeTab === subitem.tab;
+
+                          return (
+                            <Link
+                              key={`${subitem.tab}-${subitem.href}`}
+                              href={subitem.href}
+                              className={`block w-full rounded-lg px-3 py-2 text-left text-xs font-semibold transition ${
+                                childAtivo
+                                  ? "bg-blue-50 text-blue-700"
+                                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                              }`}
+                            >
+                              {subitem.label}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </nav>
+
+          <div className="border-t border-slate-100 p-3">
             <button
               type="button"
               onClick={sair}
-              className={`flex h-11 w-full items-center rounded-xl text-sm font-semibold text-slate-600 transition hover:bg-red-50 hover:text-red-700 ${menuAberto ? "justify-start gap-3 px-3" : "justify-center px-0"}`}
-              title={!menuAberto ? "Sair" : undefined}
+              className={`flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950 ${
+                menuAberto ? "justify-start" : "justify-center"
+              }`}
+              title="Sair"
             >
-              <LogOut className="h-5 w-5" strokeWidth={1.8} />
+              <LogOut className="h-5 w-5" />
               {menuAberto ? <span>Sair</span> : null}
             </button>
           </div>
         </div>
       </aside>
 
-      <section className={`min-h-screen transition-all duration-300 ${menuAberto ? "pl-[282px]" : "pl-[82px]"}`}>
-        <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
-          <div className="flex min-h-[78px] items-center justify-between gap-4 px-6 py-4">
-            <form onSubmit={pesquisarGlobal} className="relative hidden w-full max-w-xl lg:block">
-              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input
-                value={buscaGlobal}
-                onChange={(event) => setBuscaGlobal(event.target.value)}
-                placeholder="Buscar por leads, clientes, veículos, agendamentos..."
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-              />
-            </form>
+      <div
+        onClick={() => {
+          fecharMenu();
+          setDropdownAberto(null);
+        }}
+        className={`min-h-screen transition-all duration-300 ${menuAberto ? "lg:pl-[250px]" : "lg:pl-[76px]"}`}
+      >
+        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
+          <div className="flex h-[76px] items-center gap-4 px-4 sm:px-6">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setMenuAberto(true);
+              }}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 lg:hidden"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
 
-            <div className="flex flex-1 items-center justify-end gap-3">
-              <div className="relative hidden md:block">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLojasAbertas((valor) => !valor);
-                    setNotificacoesAbertas(false);
-                    setPerfilAberto(false);
+            <div className="hidden min-w-0 flex-1 items-center justify-center lg:flex">
+              <label className="relative w-full max-w-[520px]">
+                <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  value={buscaGlobal}
+                  onChange={(event) => setBuscaGlobal(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      executarBusca();
+                    }
                   }}
-                  className="flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-                >
-                  <ClipboardList className="h-4 w-4" strokeWidth={1.8} />
-                  {lojaSelecionada}
-                  <ChevronDown className="h-4 w-4 text-slate-400" />
-                </button>
-
-                {lojasAbertas ? (
-                  <div className="absolute right-0 top-12 z-50 w-52 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-200/80">
-                    {lojas.map((loja) => (
-                      <button
-                        key={loja}
-                        type="button"
-                        onClick={() => escolherLoja(loja)}
-                        className={`block w-full rounded-xl px-3 py-2 text-left text-sm font-semibold transition ${lojaSelecionada === loja ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50"}`}
-                      >
-                        {loja}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNotificacoesAbertas((valor) => !valor);
-                    setLojasAbertas(false);
-                    setPerfilAberto(false);
-                  }}
-                  className="relative h-11 w-11 rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50"
-                  title="Notificações"
-                >
-                  <Bell className="mx-auto h-5 w-5" strokeWidth={1.8} />
-                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">12</span>
-                </button>
-
-                {notificacoesAbertas ? (
-                  <div className="absolute right-0 top-12 z-50 w-[340px] rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl shadow-slate-200/80">
-                    <div className="mb-2 flex items-center justify-between px-2">
-                      <strong className="text-sm text-slate-950">Notificações</strong>
-                      <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-bold text-red-700">12</span>
-                    </div>
-                    <div className="space-y-2">
-                      {notificacoes.map((item) => (
-                        <button
-                          key={item.titulo}
-                          type="button"
-                          onClick={() => {
-                            setNotificacoesAbertas(false);
-                            router.push(item.href);
-                          }}
-                          className="w-full rounded-xl border border-slate-100 bg-slate-50 px-3 py-3 text-left transition hover:border-blue-200 hover:bg-white"
-                        >
-                          <p className="text-sm font-bold text-slate-900">{item.titulo}</p>
-                          <p className="mt-1 text-xs font-medium text-slate-500">{item.detalhe}</p>
-                        </button>
-                      ))}
-                    </div>
-                    <button type="button" onClick={() => router.push("/dashboard/relatorios")} className="mt-3 w-full rounded-xl bg-blue-700 px-3 py-2 text-sm font-bold text-white transition hover:bg-blue-800">
-                      Ver painel de alertas
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPerfilAberto((valor) => !valor);
-                    setLojasAbertas(false);
-                    setNotificacoesAbertas(false);
-                  }}
-                  className="flex items-center gap-3 rounded-2xl border border-transparent bg-white px-2 py-1.5 transition hover:border-slate-200 hover:shadow-sm"
-                  title={status.label}
-                >
-                  <div className="relative h-10 w-10">
-                    {usuario.avatar_url ? (
-                      <Image src={usuario.avatar_url} alt={usuario.nome} width={40} height={40} className="h-10 w-10 rounded-full object-cover" />
-                    ) : (
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-700">{iniciais(usuario.nome)}</div>
-                    )}
-                    <span className={`absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-white ${status.color}`} />
-                  </div>
-                  <div className="hidden text-left md:block">
-                    <p className="text-sm font-bold leading-4 text-slate-950">{usuario.nome}</p>
-                    <p className="text-xs text-slate-500">{status.label}</p>
-                  </div>
-                  <ChevronDown className="hidden h-4 w-4 text-slate-400 md:block" />
-                </button>
-
-                {perfilAberto ? (
-                  <div className="absolute right-0 top-12 z-50 w-64 rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-200/80">
-                    <div className="border-b border-slate-100 px-3 py-3">
-                      <p className="text-sm font-bold text-slate-950">{usuario.nome}</p>
-                      <p className="text-xs text-slate-500">{usuario.email}</p>
-                    </div>
-                    <button type="button" onClick={() => router.push("/dashboard/usuarios")} className="mt-2 block w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50">Meu perfil / usuários</button>
-                    <button type="button" onClick={() => router.push("/dashboard/configuracoes")} className="block w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50">Configurações</button>
-                    <button type="button" onClick={sair} className="mt-2 block w-full rounded-xl px-3 py-2 text-left text-sm font-bold text-red-700 hover:bg-red-50">Sair</button>
-                  </div>
-                ) : null}
-              </div>
+                  placeholder="Buscar por leads, clientes, veículos, agendamentos..."
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                />
+              </label>
             </div>
+
+            {podeVer(perfil, ["adm", "admin", "suporte", "gerente", "supervisor"]) ? (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setDropdownAberto((atual) => (atual === "usuarios" ? null : "usuarios"));
+                }}
+                className="hidden h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 md:flex"
+              >
+                <UserCog className="h-4 w-4" />
+                Usuários
+                <ChevronDown className="h-4 w-4 text-slate-400" />
+              </button>
+            ) : null}
+
+            <button
+              id="flow-notification-bell"
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setDropdownAberto((atual) => (atual === "notificacoes" ? null : "notificacoes"));
+              }}
+              className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
+            >
+              <Bell className="h-5 w-5" />
+              {totalNotificacoes > 0 ? (
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+                  {totalNotificacoes > 99 ? "99+" : totalNotificacoes}
+                </span>
+              ) : null}
+            </button>
+
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setDropdownAberto((atual) => (atual === "avatar" ? null : "avatar"));
+              }}
+              className="flex items-center gap-3 rounded-2xl px-2 py-1 transition hover:bg-slate-100"
+            >
+              <div className="relative flex h-11 w-11 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">
+                {usuario.nome.slice(0, 1).toUpperCase()}
+                <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white ${statusDotClass(statusOperacional)}`} title={statusLabelTopo(statusOperacional)} />
+              </div>
+              <div className="hidden text-left sm:block">
+                <p className="text-sm font-bold text-slate-900">{usuario.nome}</p>
+                <p className="text-xs text-slate-500">{usuario.perfil} • {statusLabelTopo(statusOperacional)}</p>
+              </div>
+              <ChevronDown className="hidden h-4 w-4 text-slate-400 sm:block" />
+            </button>
           </div>
         </header>
 
-        {children}
-      </section>
-    </main>
+        {dropdownAberto ? (
+          <div
+            className="fixed right-6 top-[72px] z-50 w-[340px] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-950">
+                {dropdownAberto === "notificacoes" ? "Notificações" : dropdownAberto === "usuarios" ? "Usuários" : "Minha conta"}
+              </h3>
+              <button type="button" onClick={() => setDropdownAberto(null)} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {dropdownAberto === "notificacoes" ? (
+              <div className="grid gap-2">
+                <div className="rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-600">
+                  <strong className="block text-slate-950">{totalNotificacoes}</strong>
+                  <span>notificação(ões) operacional(is) pendente(s).</span>
+                </div>
+                <Link href="/dashboard/agenda" onClick={() => setDropdownAberto(null)} className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-left text-sm font-semibold text-blue-700 hover:bg-blue-100">
+                  Abrir agenda operacional
+                </Link>
+                <Link href="/dashboard/leads/tarefas" onClick={() => setDropdownAberto(null)} className="rounded-xl border border-slate-100 px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:border-blue-200 hover:bg-blue-50">
+                  Abrir minhas tarefas
+                </Link>
+              </div>
+            ) : null}
+
+            {dropdownAberto === "usuarios" ? (
+              <div className="grid gap-2">
+                <Link href="/dashboard/usuarios" onClick={() => setDropdownAberto(null)} className="rounded-xl border border-slate-100 px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:border-blue-200 hover:bg-blue-50">
+                  Todos os usuários
+                </Link>
+                <Link href="/dashboard/usuarios/permissoes" onClick={() => setDropdownAberto(null)} className="rounded-xl border border-slate-100 px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:border-blue-200 hover:bg-blue-50">
+                  Perfis e acessos
+                </Link>
+                <Link href="/dashboard/usuarios?aba=status" onClick={() => setDropdownAberto(null)} className="rounded-xl border border-slate-100 px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:border-blue-200 hover:bg-blue-50">
+                  Status da equipe
+                </Link>
+              </div>
+            ) : null}
+
+            {dropdownAberto === "avatar" ? (
+              <div className="grid gap-2">
+                <div className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                  <strong className="block text-slate-950">{usuario.nome}</strong>
+                  <span>{usuario.perfil}</span>
+                  <div className="mt-2 flex items-center gap-2 text-xs font-black text-slate-700">
+                    <span className={`h-2.5 w-2.5 rounded-full ${statusDotClass(statusOperacional)}`} />
+                    {statusLabelTopo(statusOperacional)}
+                  </div>
+                </div>
+
+                <div className="grid gap-2 rounded-xl border border-slate-100 p-2">
+                  <p className="px-1 text-[11px] font-black uppercase tracking-wide text-slate-400">Meu status</p>
+                  <button
+                    type="button"
+                    disabled={salvandoStatus || statusOperacional === "disponivel"}
+                    onClick={() => alterarMeuStatus("disponivel")}
+                    className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-left text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Ficar disponível
+                  </button>
+                  <button
+                    type="button"
+                    disabled={salvandoStatus || statusOperacional === "ocupado"}
+                    onClick={() => alterarMeuStatus("ocupado")}
+                    className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-left text-sm font-semibold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Ficar ocupado
+                  </button>
+                  <button
+                    type="button"
+                    disabled={salvandoStatus || statusOperacional === "offline"}
+                    onClick={() => alterarMeuStatus("offline")}
+                    className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-left text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Ficar offline
+                  </button>
+                  <p className="px-1 text-[11px] font-semibold leading-4 text-slate-500">
+                    Ocupado e offline bloqueiam novos leads. Pausa almoço é automática. Pausa feedback é aplicada pela supervisão.
+                  </p>
+                </div>
+
+                <Link href="/dashboard/configuracoes" onClick={() => setDropdownAberto(null)} className="rounded-xl border border-slate-100 px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:border-blue-200 hover:bg-blue-50">
+                  Minhas configurações
+                </Link>
+                <button type="button" onClick={sair} className="rounded-xl border border-red-100 px-3 py-2 text-left text-sm font-semibold text-red-700 hover:bg-red-50">
+                  Sair
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div onClick={(event) => event.stopPropagation()}>{children}</div>
+        <NotificacoesPopup onCountChange={setTotalNotificacoes} />
+      </div>
+    </div>
   );
 }
