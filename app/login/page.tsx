@@ -38,16 +38,26 @@ export default function LoginPage() {
     setCarregando(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password: senha,
-      });
+      const emailLogin = email.trim().toLowerCase();
+const senhaLogin = senha.trim();
+
+console.log("Tentando login:", {
+  email: emailLogin,
+  senha_length: senhaLogin.length,
+});
+
+const { error } = await supabase.auth.signInWithPassword({
+  email: emailLogin,
+  password: senhaLogin,
+});
 
       if (error) {
-        setErro("E-mail ou senha inválidos. Confira os dados e tente novamente.");
-        setCarregando(false);
-        return;
-      }
+  console.error("Erro real do login:", error);
+
+  setErro("E-mail ou senha inválidos. Confira os dados e tente novamente.");
+  setCarregando(false);
+  return;
+}
 
       router.push("/dashboard");
       router.refresh();
