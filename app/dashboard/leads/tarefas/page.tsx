@@ -21,7 +21,6 @@ import {
   Zap,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { DashboardShell } from "@/components/dashboard/DashboardShell";
 
 type Lead = {
   id: string;
@@ -415,7 +414,7 @@ export default async function Page() {
   const progressoDia = metaOperacional(Math.max(totalPrioritario, 1), concluidosHoje);
 
   return (
-    <DashboardShell usuario={usuarioInterno} activeTab="leads-tarefas">
+    
       <main className="min-h-screen bg-slate-50 px-5 py-5 text-slate-950 lg:px-8 lg:py-7">
         <div className="mx-auto max-w-[1500px]">
           <section className="mb-5 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
@@ -645,6 +644,7 @@ export default async function Page() {
           </div>
         </div>
       </main>
-    </DashboardShell>
+    
   );
 }
+

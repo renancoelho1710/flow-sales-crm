@@ -1,684 +1,836 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import {
-  AlarmClock,
-  BarChart3,
-  Building2,
-  CalendarDays,
-  ChevronDown,
+  AlertTriangle,
+  ArrowRight,
+  Award,
+  CalendarCheck2,
+  CheckCircle2,
   ChevronRight,
-  ClipboardCheck,
-  Download,
-  ExternalLink,
-  Filter,
+  Clock3,
+  Flame,
+  Gauge,
+  Gift,
+  Loader2,
+  PartyPopper,
+  PhoneCall,
   ShieldCheck,
-  Store,
-  TrendingDown,
-  TrendingUp,
+  Sparkles,
+  Target,
+  Trophy,
   Users,
   WalletCards,
-  X,
 } from "lucide-react";
 
-const metrics = [
-  {
-    title: "Leads ativos",
-    value: "1.248",
-    detail: "12,5% vs. semana anterior",
-    icon: Users,
-    tone: "blue",
-    tab: "leads-ativos",
-    positive: true,
-  },
-  {
-    title: "Agendamentos hoje",
-    value: "28",
-    detail: "8,3% vs. ontem",
-    icon: CalendarDays,
-    tone: "blue",
-    tab: "agenda-hoje",
-    positive: true,
-  },
-  {
-    title: "Visitas na loja",
-    value: "19",
-    detail: "11,8% vs. ontem",
-    icon: Store,
-    tone: "purple",
-    tab: "agenda-hoje",
-    positive: true,
-  },
-  {
-    title: "Vendas pendentes",
-    value: "63",
-    detail: "4,5% vs. semana anterior",
-    icon: WalletCards,
-    tone: "orange",
-    tab: "kanban-vendas-pendentes",
-    positive: false,
-  },
-  {
-    title: "Conversão do mês",
-    value: "18,6%",
-    detail: "2,7 p.p. vs. mês anterior",
-    icon: BarChart3,
-    tone: "green",
-    tab: "relatorios",
-    positive: true,
-  },
-  {
-    title: "Leads sem contato",
-    value: "312",
-    detail: "9,6% vs. semana anterior",
-    icon: AlarmClock,
-    tone: "red",
-    tab: "controle-3cx",
-    positive: true,
-  },
-];
+export type DashboardVisao = "geral" | "operacional" | "estrategico";
 
-const linePoints = [
-  { x: 25, y: 125 },
-  { x: 110, y: 104 },
-  { x: 195, y: 128 },
-  { x: 280, y: 82 },
-  { x: 365, y: 100 },
-  { x: 450, y: 66 },
-  { x: 535, y: 118 },
-  { x: 620, y: 90 },
-];
-
-const appointments = [
-  { time: "09:00", name: "Carlos Henrique Silva", car: "Jeep Compass Limited 2.0", badge: "Visita", tab: "agenda-hoje" },
-  { time: "10:30", name: "Juliana Martins", car: "Toyota Corolla XEi 2.0", badge: "Test Drive", tab: "agenda-hoje" },
-  { time: "11:00", name: "Rafael Costa", car: "Honda HR-V EXL 1.5", badge: "Visita", tab: "agenda-hoje" },
-  { time: "14:00", name: "Fernanda Oliveira", car: "VW T-Cross Highline 1.4", badge: "Proposta", tab: "kanban-vendas-pendentes" },
-  { time: "15:30", name: "Bruno Almeida", car: "Chevrolet Tracker Premier", badge: "Test Drive", tab: "agenda-hoje" },
-];
-
-const kanban = [
-  {
-    title: "Morno",
-    count: 124,
-    footer: "+ 122 leads",
-    cards: [
-      { name: "Leonardo Souza", car: "Jeep Renegade", info: "Entrada: 22/05", tag: "Morno" },
-      { name: "Patricia Lima", car: "VW Nivus Comfortline", info: "Entrada: 22/05", tag: "Morno" },
-    ],
-  },
-  {
-    title: "Em contato",
-    count: 86,
-    footer: "+ 84 leads",
-    cards: [
-      { name: "Thiago Ferreira", car: "Honda Civic EX", info: "Último contato: hoje", tag: "Ligação" },
-      { name: "Camila Mendes", car: "Toyota Yaris XL", info: "Último contato: ontem", tag: "WhatsApp" },
-    ],
-  },
-  {
-    title: "Agendado",
-    count: 42,
-    footer: "+ 40 leads",
-    cards: [
-      { name: "Ricardo Andrade", car: "Jeep Compass", info: "Agendado: 22/05 10:00", tag: "Agenda" },
-      { name: "Beatriz Rocha", car: "Chevrolet Onix Plus", info: "Agendado: 22/05 14:00", tag: "Agenda" },
-    ],
-  },
-  {
-    title: "Visitou loja",
-    count: 19,
-    footer: "+ 17 leads",
-    cards: [
-      { name: "Gabriel Moreira", car: "VW Taos Highline", info: "Visitou: 21/05", tag: "Loja" },
-      { name: "Mariana Santos", car: "Honda HR-V EX", info: "Visitou: 21/05", tag: "Loja" },
-    ],
-  },
-];
-
-const urgentActions = [
-  { label: "Retornar leads sem contato > 3 dias", value: 142, tab: "controle-3cx", color: "bg-red-100 text-red-700" },
-  { label: "Validar propostas pendentes", value: 27, tab: "kanban-vendas-pendentes", color: "bg-orange-100 text-orange-700" },
-  { label: "Follow-up em atraso", value: 18, tab: "leads-ativos", color: "bg-red-100 text-red-700" },
-  { label: "Agendamentos de hoje", value: 28, tab: "agenda-hoje", color: "bg-blue-100 text-blue-700" },
-  { label: "Conferência pendente", value: 15, tab: "conferencia-veiculos", color: "bg-violet-100 text-violet-700" },
-];
-
-const funnel = [
-  { label: "Morno", value: "1.248", percent: "100%", width: "100%", color: "bg-blue-100 text-blue-800", tab: "leads-ativos" },
-  { label: "Em contato", value: "842", percent: "67,6%", width: "70%", color: "bg-slate-100 text-slate-800", tab: "controle-3cx" },
-  { label: "Agendado", value: "312", percent: "25,0%", width: "48%", color: "bg-violet-100 text-violet-800", tab: "agenda-hoje" },
-  { label: "Visitou loja", value: "169", percent: "13,6%", width: "34%", color: "bg-emerald-100 text-emerald-800", tab: "agenda-hoje" },
-  { label: "Venda pendente", value: "63", percent: "5,0%", width: "28%", color: "bg-orange-100 text-orange-800", tab: "kanban-vendas-pendentes" },
-  { label: "Venda validada", value: "34", percent: "2,7%", width: "22%", color: "bg-green-100 text-green-800", tab: "relatorios" },
-];
-
-const tabRoutes: Record<string, string> = {
-  "dashboard-geral": "/dashboard",
-  "dashboard-operacional": "/dashboard?visao=operacional",
-  "dashboard-estrategico": "/dashboard?visao=estrategico",
-  "leads-ativos": "/dashboard/leads",
-  "novo-lead": "/dashboard/leads?acao=novo",
-  "importar-base": "/dashboard/c2s",
-  "leads-arquivados": "/dashboard/leads?filtro=arquivados",
-  "kanban-funil": "/dashboard/kanban",
-  "kanban-minhas": "/dashboard/kanban?visao=minhas",
-  "kanban-vendas-pendentes": "/dashboard/kanban?filtro=vendas-pendentes",
-  "agenda-hoje": "/dashboard/agenda",
-  "agenda-semana": "/dashboard/agenda?periodo=semana",
-  "agenda-mes": "/dashboard/agenda?periodo=mes",
-  "controle-3cx": "/dashboard/3cx",
-  "ligacoes-3cx": "/dashboard/3cx?aba=ligacoes",
-  "classificacoes-3cx": "/dashboard/3cx?aba=classificacoes",
-  "whatsapp-3cx": "/dashboard/3cx/whatsapp",
-  "campanhas-ativas": "/dashboard/campanhas",
-  "criar-campanha": "/dashboard/campanhas?acao=nova",
-  "mensagens-campanha": "/dashboard/campanhas?aba=mensagens",
-  simulador: "/dashboard/simulador",
-  "simulacoes-salvas": "/dashboard/simulador?aba=salvas",
-  "conferencia-veiculos": "/dashboard/conferencia",
-  "conferencia-divergencias": "/dashboard/conferencia?filtro=divergencias",
-  "conferencia-aceitos": "/dashboard/conferencia?filtro=aceitos",
-  relatorios: "/dashboard/relatorios",
-  "relatorios-equipe": "/dashboard/relatorios?aba=equipe",
-  "relatorios-unidades": "/dashboard/relatorios?aba=unidades",
-  usuarios: "/dashboard/usuarios",
-  "usuarios-perfis": "/dashboard/usuarios/permissoes",
-  "usuarios-status": "/dashboard/usuarios?aba=status",
-  configuracoes: "/dashboard/configuracoes",
-  "configuracoes-tema": "/dashboard/configuracoes?aba=tema",
-  "configuracoes-integracoes": "/dashboard/configuracoes?aba=integracoes",
-  "acoes-urgentes": "/dashboard/leads?filtro=urgentes",
+type DashboardData = {
+  ok: boolean;
+  usuario?: {
+    id: string;
+    nome: string;
+    email: string | null;
+    perfil: string | null;
+  };
+  modo?: "gestao" | "operador";
+  metas?: {
+    diaria_agendamentos: number;
+    hoje_com_acumulado: number;
+    pendencia_anterior: number;
+    faltam_hoje: number;
+    gordura_hoje: number;
+    mensal_agendamentos: number;
+    mensal_vendas: number;
+    percentual_hoje: number;
+    percentual_mes: number;
+    mensagem: string;
+  };
+  resumo?: {
+    leads_ativos: number;
+    agendamentos_hoje: number;
+    agendamentos_semana: number;
+    agendamentos_mes: number;
+    vendas_pendentes: number;
+    vendas_confirmadas: number;
+    leads_sem_contato: number;
+    proximas_acoes_atrasadas: number;
+    comissao_prevista: number;
+    comissao_confirmada: number;
+  };
+  serie?: Array<{
+    data: string;
+    label: string;
+    agendamentos: number;
+    vendas: number;
+  }>;
+  proximas_acoes?: Array<{
+    id: string;
+    nome: string;
+    telefone: string | null;
+    veiculo_interesse: string | null;
+    data_proxima_acao: string | null;
+    temperatura: string | null;
+    etapa: string | null;
+  }>;
+  equipe?: Array<{
+    id: string;
+    nome: string;
+    perfil: string | null;
+    status_operacional: string | null;
+    recebe_leads: boolean;
+    agendamentos_mes: number;
+    vendas_mes: number;
+    meta_mensal_agendamentos: number;
+    progresso: number;
+  }>;
+  status_equipe?: {
+    disponiveis: number;
+    ocupados: number;
+    pausas: number;
+    offline: number;
+  } | null;
+  erro?: string;
 };
 
-type Painel = {
+function formatarDinheiro(valor?: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(Number(valor || 0));
+}
+
+function formatarDataHora(valor?: string | null) {
+  if (!valor) return "Sem data";
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(valor));
+}
+
+function statusTexto(valor?: string | null) {
+  return String(valor || "offline")
+    .replaceAll("_", " ")
+    .replaceAll("-", " ")
+    .replace(/\b\w/g, (letra) => letra.toUpperCase());
+}
+
+function limitarPercentual(valor?: number) {
+  return Math.max(0, Math.min(100, Number(valor || 0)));
+}
+
+function PremiumCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <section className={`rounded-[28px] border border-slate-200/80 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.06)] ${className}`}>
+      {children}
+    </section>
+  );
+}
+
+function KpiCard({
+  titulo,
+  valor,
+  detalhe,
+  icon: Icon,
+  tom,
+  href,
+}: {
   titulo: string;
-  descricao: string;
-  rota?: string;
-  itens?: string[];
-};
+  valor: string | number;
+  detalhe: string;
+  icon: any;
+  tom: "blue" | "emerald" | "orange" | "red" | "purple" | "slate";
+  href: string;
+}) {
+  const tons = {
+    blue: "from-blue-50 to-sky-50 text-blue-700 border-blue-100",
+    emerald: "from-emerald-50 to-green-50 text-emerald-700 border-emerald-100",
+    orange: "from-orange-50 to-amber-50 text-orange-700 border-orange-100",
+    red: "from-red-50 to-rose-50 text-red-700 border-red-100",
+    purple: "from-violet-50 to-purple-50 text-violet-700 border-violet-100",
+    slate: "from-slate-50 to-slate-100 text-slate-700 border-slate-200",
+  }[tom];
 
-function getTabLabel(tab: string) {
-  const labels: Record<string, string> = {
-    "dashboard-geral": "Visão geral",
-    "dashboard-operacional": "Operacional",
-    "dashboard-estrategico": "Estratégico",
-    "leads-ativos": "Leads ativos",
-    "kanban-funil": "Funil completo",
-    "kanban-vendas-pendentes": "Vendas pendentes",
-    "agenda-hoje": "Agenda de hoje",
-    "controle-3cx": "Controle 3CX",
-    "conferencia-veiculos": "Conferência de veículos",
-    "relatorios": "Relatórios",
-    "relatorios-unidades": "Relatório por unidade",
-    "acoes-urgentes": "Ações urgentes",
-  };
-
-  return labels[tab] || tab;
+  return (
+    <Link
+      href={href}
+      className="group rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-950/5"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{titulo}</p>
+          <p className="mt-2 text-3xl font-black tracking-[-0.06em] text-slate-950">{valor}</p>
+          <p className="mt-1 text-xs font-bold text-slate-500">{detalhe}</p>
+        </div>
+        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border bg-gradient-to-br ${tons}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+      </div>
+    </Link>
+  );
 }
 
-function montarPainel(titulo: string, descricao: string, rota?: string, itens?: string[]): Painel {
-  return { titulo, descricao, rota, itens };
+function Confetes({ ativo }: { ativo: boolean }) {
+  if (!ativo) return null;
+
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[28px]">
+      {Array.from({ length: 18 }).map((_, index) => (
+        <span
+          key={index}
+          className="absolute h-2 w-2 animate-bounce rounded-full bg-blue-500 opacity-80"
+          style={{
+            left: `${8 + ((index * 17) % 84)}%`,
+            top: `${8 + ((index * 23) % 64)}%`,
+            animationDelay: `${index * 0.08}s`,
+          }}
+        />
+      ))}
+    </div>
+  );
 }
 
-function exportarCsv(nomeArquivo: string, linhas: Array<Array<string | number>>) {
-  const csv = linhas
-    .map((linha) => linha.map((campo) => `"${String(campo).replace(/"/g, '""')}"`).join(","))
-    .join("\n");
+function TermometroMeta({ data }: { data: DashboardData }) {
+  const metas = data.metas;
+  const resumo = data.resumo;
+  const percentualMes = limitarPercentual(metas?.percentual_mes);
+  const percentualHoje = limitarPercentual(metas?.percentual_hoje);
+  const metaBatida = Number(metas?.percentual_hoje || 0) >= 100;
+  const emoji = metaBatida ? "🎉" : percentualHoje >= 75 ? "😄" : percentualHoje >= 50 ? "🙂" : "🚀";
 
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = nomeArquivo;
-  link.click();
-  URL.revokeObjectURL(url);
+  return (
+    <PremiumCard className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-5 text-white">
+      <Confetes ativo={metaBatida} />
+      <div className="relative z-10 grid gap-5 lg:grid-cols-[92px_1fr]">
+        <div className="flex items-end justify-center rounded-[24px] border border-white/10 bg-white/10 p-3 backdrop-blur">
+          <div className="relative h-[250px] w-12 overflow-hidden rounded-full border border-white/20 bg-white/15 shadow-inner">
+            <div
+              className="absolute bottom-0 left-0 right-0 rounded-full bg-gradient-to-t from-cyan-300 via-blue-400 to-emerald-300 transition-all duration-700"
+              style={{ height: `${percentualMes}%` }}
+            />
+            <div className="absolute inset-0 flex items-center justify-center text-2xl">{emoji}</div>
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.28em] text-cyan-200">Meta evolutiva</p>
+              <h2 className="mt-2 text-2xl font-black tracking-[-0.04em]">Seu painel de evolução</h2>
+            </div>
+            <div className="rounded-2xl bg-white/10 px-3 py-2 text-right backdrop-blur">
+              <p className="text-[10px] font-black uppercase tracking-wide text-cyan-100">Mês</p>
+              <p className="text-xl font-black">{percentualMes}%</p>
+            </div>
+          </div>
+
+          <p className="mt-4 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-bold leading-6 text-blue-50">
+            {metas?.mensagem || "Carregando sua meta operacional."}
+          </p>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl bg-white/10 p-4 backdrop-blur">
+              <p className="text-[10px] font-black uppercase tracking-wide text-cyan-100">Hoje</p>
+              <p className="mt-1 text-3xl font-black">{resumo?.agendamentos_hoje || 0}/{metas?.hoje_com_acumulado || 0}</p>
+              <p className="mt-1 text-xs font-bold text-blue-100">
+                {metas?.faltam_hoje ? `Faltam ${metas.faltam_hoje}` : "Meta do dia concluída"}
+              </p>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/15">
+                <div className="h-full rounded-full bg-cyan-300" style={{ width: `${percentualHoje}%` }} />
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-white/10 p-4 backdrop-blur">
+              <p className="text-[10px] font-black uppercase tracking-wide text-cyan-100">Gordurinha</p>
+              <p className="mt-1 text-3xl font-black">+{metas?.gordura_hoje || 0}</p>
+              <p className="mt-1 text-xs font-bold text-blue-100">Vantagem para os próximos dias</p>
+              <div className="mt-3 flex items-center gap-2 text-xs font-black text-emerald-200">
+                <Sparkles className="h-4 w-4" /> Evolução saudável
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </PremiumCard>
+  );
 }
 
-function getToneClasses(tone: string) {
-  const tones: Record<string, string> = {
-    blue: "bg-blue-50 text-blue-700",
-    purple: "bg-violet-50 text-violet-700",
-    orange: "bg-orange-50 text-orange-700",
-    green: "bg-emerald-50 text-emerald-700",
-    red: "bg-red-50 text-red-700",
-  };
+function GraficoEvolucao({ serie = [] }: { serie?: DashboardData["serie"] }) {
+  const maximo = Math.max(1, ...(serie || []).flatMap((item) => [item.agendamentos, item.vendas]));
 
-  return tones[tone] ?? tones.blue;
+  return (
+    <PremiumCard className="p-5">
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">Evolução</p>
+          <h2 className="mt-1 text-xl font-black text-slate-950">Agendamentos e vendas</h2>
+        </div>
+        <Link href="/dashboard/relatorios" className="inline-flex items-center gap-1 text-xs font-black text-blue-700">
+          Relatórios <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
+
+      <div className="flex h-[245px] items-end gap-3 rounded-3xl bg-gradient-to-b from-slate-50 to-white p-4">
+        {(serie || []).map((item) => {
+          const alturaAg = Math.max(8, (item.agendamentos / maximo) * 172);
+          const alturaVendas = Math.max(8, (item.vendas / maximo) * 172);
+          return (
+            <div key={item.data} className="flex flex-1 flex-col items-center justify-end gap-2">
+              <div className="flex h-[180px] items-end gap-1.5">
+                <div className="w-5 rounded-t-xl bg-blue-700" style={{ height: `${alturaAg}px` }} title={`${item.agendamentos} agendamento(s)`} />
+                <div className="w-5 rounded-t-xl bg-emerald-500" style={{ height: `${alturaVendas}px` }} title={`${item.vendas} venda(s)`} />
+              </div>
+              <p className="text-[11px] font-black uppercase text-slate-400">{item.label}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-4 text-xs font-black text-slate-500">
+        <span className="inline-flex items-center gap-2"><span className="h-2.5 w-5 rounded-full bg-blue-700" /> Agendamentos</span>
+        <span className="inline-flex items-center gap-2"><span className="h-2.5 w-5 rounded-full bg-emerald-500" /> Vendas confirmadas</span>
+      </div>
+    </PremiumCard>
+  );
 }
 
-export function DashboardClient() {
-  const router = useRouter();
-  const [painel, setPainel] = useState<Painel | null>(null);
-  const [dropdownAberto, setDropdownAberto] = useState<"periodo" | "filtros" | null>(null);
-  const [graficoHover, setGraficoHover] = useState<Painel | null>(null);
-  const [barraHover, setBarraHover] = useState<Painel | null>(null);
+function PainelComissao({ data }: { data: DashboardData }) {
+  const resumo = data.resumo;
+  return (
+    <PremiumCard className="p-5">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-700">Comissão</p>
+          <h2 className="mt-1 text-xl font-black text-slate-950">Resultado financeiro</h2>
+        </div>
+        <WalletCards className="h-8 w-8 text-emerald-600" />
+      </div>
 
-  function abrirPainel(tab: string, titulo?: string, descricao?: string, itens?: string[]) {
-    const rota = tabRoutes[tab];
-    const nome = titulo || getTabLabel(tab);
+      <div className="mt-5 grid gap-3">
+        <div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-4">
+          <p className="text-[11px] font-black uppercase tracking-wide text-emerald-700">Confirmada</p>
+          <p className="mt-2 text-3xl font-black tracking-[-0.05em] text-slate-950">{formatarDinheiro(resumo?.comissao_confirmada)}</p>
+          <p className="mt-1 text-xs font-bold text-emerald-700">Valor já validado</p>
+        </div>
+        <div className="rounded-3xl border border-blue-100 bg-blue-50 p-4">
+          <p className="text-[11px] font-black uppercase tracking-wide text-blue-700">Prevista</p>
+          <p className="mt-2 text-3xl font-black tracking-[-0.05em] text-slate-950">{formatarDinheiro(resumo?.comissao_prevista)}</p>
+          <p className="mt-1 text-xs font-bold text-blue-700">Aguardando validação</p>
+        </div>
+      </div>
+    </PremiumCard>
+  );
+}
 
-    setPainel(
-      montarPainel(
-        nome,
-        descricao || `Área preparada para ${nome}. Quando o módulo estiver completo, este ponto já estará conectado ao fluxo correto.`,
-        rota,
-        itens
-      )
+function ListaAcoes({ data }: { data: DashboardData }) {
+  const lista = data.proximas_acoes || [];
+  return (
+    <PremiumCard className="p-5">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-700">Fila inteligente</p>
+          <h2 className="mt-1 text-xl font-black text-slate-950">Próximas ações</h2>
+        </div>
+        <Link href="/dashboard/leads/tarefas" className="text-xs font-black text-blue-700">Ver tarefas</Link>
+      </div>
+
+      <div className="grid gap-3">
+        {lista.length === 0 ? (
+          <div className="rounded-3xl border border-slate-100 bg-slate-50 p-5 text-sm font-bold text-slate-500">
+            Nenhuma próxima ação crítica agora.
+          </div>
+        ) : (
+          lista.map((item) => (
+            <Link key={item.id} href={`/dashboard/leads/${item.id}`} className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm transition hover:border-blue-200 hover:bg-blue-50/30">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="line-clamp-1 text-sm font-black text-slate-950">{item.nome}</p>
+                  <p className="mt-1 line-clamp-1 text-xs font-bold text-slate-500">{item.veiculo_interesse || item.telefone || "Sem veículo informado"}</p>
+                </div>
+                <span className="rounded-full border border-orange-100 bg-orange-50 px-2 py-1 text-[10px] font-black text-orange-700">
+                  {statusTexto(item.temperatura || "morno")}
+                </span>
+              </div>
+              <p className="mt-3 text-xs font-black text-slate-600">{formatarDataHora(item.data_proxima_acao)}</p>
+            </Link>
+          ))
+        )}
+      </div>
+    </PremiumCard>
+  );
+}
+
+function PainelEquipe({ data }: { data: DashboardData }) {
+  const equipe = data.equipe || [];
+  const status = data.status_equipe;
+
+  return (
+    <PremiumCard className="p-5">
+      <div className="mb-5 flex flex-col justify-between gap-3 md:flex-row md:items-center">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">Equipe</p>
+          <h2 className="mt-1 text-xl font-black text-slate-950">Progresso dos colaboradores</h2>
+        </div>
+        <Link href="/dashboard/configuracoes/metas" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 text-xs font-black text-white">
+          Configurar metas <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
+
+      {status ? (
+        <div className="mb-5 grid gap-3 sm:grid-cols-4">
+          <div className="rounded-2xl bg-emerald-50 p-3 text-center"><p className="text-2xl font-black text-emerald-700">{status.disponiveis}</p><p className="text-[10px] font-black uppercase text-emerald-600">Disponíveis</p></div>
+          <div className="rounded-2xl bg-blue-50 p-3 text-center"><p className="text-2xl font-black text-blue-700">{status.ocupados}</p><p className="text-[10px] font-black uppercase text-blue-600">Ocupados</p></div>
+          <div className="rounded-2xl bg-orange-50 p-3 text-center"><p className="text-2xl font-black text-orange-700">{status.pausas}</p><p className="text-[10px] font-black uppercase text-orange-600">Pausas</p></div>
+          <div className="rounded-2xl bg-slate-100 p-3 text-center"><p className="text-2xl font-black text-slate-700">{status.offline}</p><p className="text-[10px] font-black uppercase text-slate-500">Offline</p></div>
+        </div>
+      ) : null}
+
+      <div className="grid gap-3">
+        {equipe.slice(0, 10).map((membro) => {
+          const progresso = limitarPercentual(membro.progresso);
+          return (
+            <div key={membro.id} className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
+              <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
+                <div className="min-w-0">
+                  <p className="line-clamp-1 text-sm font-black text-slate-950">{membro.nome}</p>
+                  <p className="mt-1 text-xs font-bold text-slate-500">
+                    {membro.agendamentos_mes}/{membro.meta_mensal_agendamentos} agendamentos • {membro.vendas_mes} venda(s)
+                  </p>
+                </div>
+                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-600">
+                  {statusTexto(membro.status_operacional)}
+                </span>
+              </div>
+              <div className="mt-3 h-3 overflow-hidden rounded-full bg-white">
+                <div className="h-full rounded-full bg-gradient-to-r from-blue-600 to-emerald-400" style={{ width: `${progresso}%` }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </PremiumCard>
+  );
+}
+
+function DashboardOperador({ data }: { data: DashboardData }) {
+  const resumo = data.resumo;
+
+  return (
+    <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1760px] space-y-5">
+        <section className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-700">Meu painel</p>
+            <h1 className="mt-2 text-3xl font-black tracking-[-0.05em] text-slate-950">Bom trabalho, {data.usuario?.nome?.split(" ")[0] || "operador"}.</h1>
+            <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-600">
+              Sua rotina do dia, metas, comissão e oportunidades prioritárias em uma visão única.
+            </p>
+          </div>
+          <Link href="/dashboard/kanban/minhas-oportunidades" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-sm font-black text-white shadow-lg shadow-blue-700/20">
+            Minhas oportunidades <ArrowRight className="h-4 w-4" />
+          </Link>
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <KpiCard titulo="Hoje" valor={resumo?.agendamentos_hoje || 0} detalhe="Agendamentos do dia" icon={CalendarCheck2} tom="blue" href="/dashboard/agenda" />
+          <KpiCard titulo="Semana" valor={resumo?.agendamentos_semana || 0} detalhe="Ritmo semanal" icon={Gauge} tom="purple" href="/dashboard/agenda?periodo=semana" />
+          <KpiCard titulo="Vendas pendentes" valor={resumo?.vendas_pendentes || 0} detalhe="Aguardando ADM" icon={WalletCards} tom="orange" href="/dashboard/kanban/vendas-pendentes" />
+          <KpiCard titulo="Confirmadas" valor={resumo?.vendas_confirmadas || 0} detalhe="Vendas validadas" icon={Trophy} tom="emerald" href="/dashboard/kanban/vendas-feitas" />
+          <KpiCard titulo="Atrasadas" valor={resumo?.proximas_acoes_atrasadas || 0} detalhe="Retornar primeiro" icon={AlertTriangle} tom="red" href="/dashboard/leads/tarefas" />
+        </section>
+
+        <section className="grid gap-5 xl:grid-cols-[1.05fr_0.62fr]">
+          <TermometroMeta data={data} />
+          <PainelComissao data={data} />
+        </section>
+
+        <section className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+          <GraficoEvolucao serie={data.serie} />
+          <ListaAcoes data={data} />
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function DashboardGestao({ data }: { data: DashboardData }) {
+  const resumo = data.resumo;
+  const metas = data.metas;
+  const progressoEquipe = limitarPercentual(metas?.percentual_mes);
+
+  return (
+    <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1760px] space-y-5">
+        <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.06)]">
+          <div className="grid gap-0 xl:grid-cols-[1fr_360px]">
+            <div className="p-6 lg:p-7">
+              <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-700">Comando comercial</p>
+              <h1 className="mt-2 text-3xl font-black tracking-[-0.05em] text-slate-950">Dashboard executivo do Flow Sales</h1>
+              <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-600">
+                Operação, metas, validações, status da equipe, vendas e ações críticas em uma tela de gestão.
+              </p>
+
+              <div className="mt-6 grid gap-3 md:grid-cols-4">
+                <div className="rounded-3xl bg-blue-50 p-4"><p className="text-[10px] font-black uppercase text-blue-700">Leads ativos</p><p className="mt-2 text-3xl font-black">{resumo?.leads_ativos || 0}</p></div>
+                <div className="rounded-3xl bg-orange-50 p-4"><p className="text-[10px] font-black uppercase text-orange-700">Vendas pendentes</p><p className="mt-2 text-3xl font-black">{resumo?.vendas_pendentes || 0}</p></div>
+                <div className="rounded-3xl bg-emerald-50 p-4"><p className="text-[10px] font-black uppercase text-emerald-700">Confirmadas</p><p className="mt-2 text-3xl font-black">{resumo?.vendas_confirmadas || 0}</p></div>
+                <div className="rounded-3xl bg-red-50 p-4"><p className="text-[10px] font-black uppercase text-red-700">Ações atrasadas</p><p className="mt-2 text-3xl font-black">{resumo?.proximas_acoes_atrasadas || 0}</p></div>
+              </div>
+            </div>
+
+            <div className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-6 text-white">
+              <Confetes ativo={progressoEquipe >= 100} />
+              <div className="relative z-10">
+                <div className="mb-4 flex items-center justify-between">
+                  <Target className="h-8 w-8 text-cyan-200" />
+                  <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-black text-cyan-100">Equipe</span>
+                </div>
+                <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-200">Meta da operação</p>
+                <p className="mt-2 text-5xl font-black tracking-[-0.08em]">{progressoEquipe}%</p>
+                <p className="mt-2 text-sm font-bold leading-6 text-blue-100">{metas?.mensagem}</p>
+                <div className="mt-5 h-4 overflow-hidden rounded-full bg-white/15">
+                  <div className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-emerald-300" style={{ width: `${progressoEquipe}%` }} />
+                </div>
+                <div className="mt-5 grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl bg-white/10 p-3"><p className="text-[10px] font-black uppercase text-cyan-100">Ag. mês</p><p className="text-2xl font-black">{resumo?.agendamentos_mes || 0}</p></div>
+                  <div className="rounded-2xl bg-white/10 p-3"><p className="text-[10px] font-black uppercase text-cyan-100">Meta</p><p className="text-2xl font-black">{metas?.mensal_agendamentos || 0}</p></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+          <KpiCard titulo="Agendamentos hoje" valor={resumo?.agendamentos_hoje || 0} detalhe="Equipe no dia" icon={CalendarCheck2} tom="blue" href="/dashboard/agenda" />
+          <KpiCard titulo="Semana" valor={resumo?.agendamentos_semana || 0} detalhe="Ritmo comercial" icon={Clock3} tom="purple" href="/dashboard/agenda?periodo=semana" />
+          <KpiCard titulo="Sem contato" valor={resumo?.leads_sem_contato || 0} detalhe="Primeira ligação" icon={PhoneCall} tom="red" href="/dashboard/leads?filtro=sem-contato" />
+          <KpiCard titulo="Pendentes" valor={resumo?.vendas_pendentes || 0} detalhe="Validar vendas" icon={WalletCards} tom="orange" href="/dashboard/kanban/vendas-pendentes" />
+          <KpiCard titulo="Confirmadas" valor={resumo?.vendas_confirmadas || 0} detalhe="No mês" icon={Award} tom="emerald" href="/dashboard/kanban/vendas-feitas" />
+          <KpiCard titulo="Comissão prevista" valor={formatarDinheiro(resumo?.comissao_prevista)} detalhe="Resgate pendente" icon={Gift} tom="slate" href="/dashboard/relatorios" />
+        </section>
+
+        <section className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+          <GraficoEvolucao serie={data.serie} />
+          <PainelEquipe data={data} />
+        </section>
+
+        <section className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
+          <ListaAcoes data={data} />
+          <PremiumCard className="p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-700">Ações de gestão</p>
+                <h2 className="mt-1 text-xl font-black text-slate-950">Fila de decisão</h2>
+              </div>
+              <ShieldCheck className="h-8 w-8 text-blue-700" />
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <Link href="/dashboard/kanban/vendas-pendentes" className="rounded-3xl border border-orange-100 bg-orange-50 p-4 transition hover:bg-orange-100"><p className="text-sm font-black text-slate-950">Validar vendas pendentes</p><p className="mt-1 text-xs font-bold text-orange-700">Confirmar, recusar ou devolver para reprocesso.</p></Link>
+              <Link href="/dashboard/usuarios/status" className="rounded-3xl border border-blue-100 bg-blue-50 p-4 transition hover:bg-blue-100"><p className="text-sm font-black text-slate-950">Acompanhar status da equipe</p><p className="mt-1 text-xs font-bold text-blue-700">Disponíveis, pausas, ocupados e offline.</p></Link>
+              <Link href="/dashboard/configuracoes/metas" className="rounded-3xl border border-emerald-100 bg-emerald-50 p-4 transition hover:bg-emerald-100"><p className="text-sm font-black text-slate-950">Configurar metas</p><p className="mt-1 text-xs font-bold text-emerald-700">Metas por colaborador, comissão e acumulado.</p></Link>
+              <Link href="/dashboard/configuracoes/integracoes" className="rounded-3xl border border-violet-100 bg-violet-50 p-4 transition hover:bg-violet-100"><p className="text-sm font-black text-slate-950">Integrações</p><p className="mt-1 text-xs font-bold text-violet-700">C2S, 3CX, WhatsApp e webhooks.</p></Link>
+            </div>
+          </PremiumCard>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+
+function DashboardGeralGestao({ data }: { data: DashboardData }) {
+  const resumo = data.resumo;
+  const metas = data.metas;
+  const progressoEquipe = limitarPercentual(metas?.percentual_mes);
+
+  return (
+    <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1760px] space-y-5">
+        <section className="grid gap-5 xl:grid-cols-[1fr_380px]">
+          <PremiumCard className="overflow-hidden p-6 lg:p-7">
+            <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-700">Visão geral</p>
+                <h1 className="mt-2 text-3xl font-black tracking-[-0.05em] text-slate-950">Resumo executivo da operação</h1>
+                <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-600">
+                  Uma leitura rápida da empresa: volume de leads, agenda, vendas, pendências e evolução da meta.
+                </p>
+              </div>
+              <Link href="/dashboard/c2s" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-sm font-black text-white shadow-lg shadow-blue-700/20">
+                Importar base <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+
+            <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-3xl bg-blue-50 p-4"><p className="text-[10px] font-black uppercase text-blue-700">Leads ativos</p><p className="mt-2 text-3xl font-black">{resumo?.leads_ativos || 0}</p><p className="mt-1 text-xs font-bold text-blue-700">Base em atendimento</p></div>
+              <div className="rounded-3xl bg-sky-50 p-4"><p className="text-[10px] font-black uppercase text-sky-700">Agenda hoje</p><p className="mt-2 text-3xl font-black">{resumo?.agendamentos_hoje || 0}</p><p className="mt-1 text-xs font-bold text-sky-700">Visitas e retornos</p></div>
+              <div className="rounded-3xl bg-orange-50 p-4"><p className="text-[10px] font-black uppercase text-orange-700">Vendas pendentes</p><p className="mt-2 text-3xl font-black">{resumo?.vendas_pendentes || 0}</p><p className="mt-1 text-xs font-bold text-orange-700">Validação ADM</p></div>
+              <div className="rounded-3xl bg-emerald-50 p-4"><p className="text-[10px] font-black uppercase text-emerald-700">Confirmadas</p><p className="mt-2 text-3xl font-black">{resumo?.vendas_confirmadas || 0}</p><p className="mt-1 text-xs font-bold text-emerald-700">Resultado validado</p></div>
+            </div>
+          </PremiumCard>
+
+          <PremiumCard className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-6 text-white">
+            <Confetes ativo={progressoEquipe >= 100} />
+            <div className="relative z-10">
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-200">Meta geral</p>
+              <p className="mt-3 text-6xl font-black tracking-[-0.08em]">{progressoEquipe}%</p>
+              <p className="mt-3 text-sm font-bold leading-6 text-blue-100">{metas?.mensagem || "Acompanhando a meta da operação."}</p>
+              <div className="mt-5 h-4 overflow-hidden rounded-full bg-white/15">
+                <div className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-emerald-300" style={{ width: `${progressoEquipe}%` }} />
+              </div>
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <div className="rounded-2xl bg-white/10 p-3"><p className="text-[10px] font-black uppercase text-cyan-100">Ag. mês</p><p className="text-2xl font-black">{resumo?.agendamentos_mes || 0}</p></div>
+                <div className="rounded-2xl bg-white/10 p-3"><p className="text-[10px] font-black uppercase text-cyan-100">Meta</p><p className="text-2xl font-black">{metas?.mensal_agendamentos || 0}</p></div>
+              </div>
+            </div>
+          </PremiumCard>
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+          <KpiCard titulo="Semana" valor={resumo?.agendamentos_semana || 0} detalhe="Ritmo comercial" icon={Clock3} tom="purple" href="/dashboard/agenda?periodo=semana" />
+          <KpiCard titulo="Sem contato" valor={resumo?.leads_sem_contato || 0} detalhe="Primeira abordagem" icon={PhoneCall} tom="red" href="/dashboard/leads?filtro=sem-contato" />
+          <KpiCard titulo="Atrasadas" valor={resumo?.proximas_acoes_atrasadas || 0} detalhe="Ações críticas" icon={AlertTriangle} tom="orange" href="/dashboard/leads/tarefas" />
+          <KpiCard titulo="Comissão prevista" valor={formatarDinheiro(resumo?.comissao_prevista)} detalhe="Pendente de validação" icon={Gift} tom="slate" href="/dashboard/relatorios" />
+          <KpiCard titulo="Kanban" valor="Abrir" detalhe="Funil comercial" icon={WalletCards} tom="blue" href="/dashboard/kanban" />
+          <KpiCard titulo="Agenda" valor="Ver" detalhe="Calendário operacional" icon={CalendarCheck2} tom="emerald" href="/dashboard/agenda" />
+        </section>
+
+        <section className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+          <GraficoEvolucao serie={data.serie} />
+          <PainelEquipe data={data} />
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function DashboardOperacionalGestao({ data }: { data: DashboardData }) {
+  const resumo = data.resumo;
+
+  return (
+    <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1760px] space-y-5">
+        <section className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.28em] text-orange-700">Operacional</p>
+            <h1 className="mt-2 text-3xl font-black tracking-[-0.05em] text-slate-950">Central de ação do dia</h1>
+            <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-600">
+              Feita para supervisão acompanhar gargalos: agenda, atrasos, leads sem contato, disponibilidade da equipe e decisões urgentes.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/dashboard/agenda" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-sm font-black text-white">Abrir agenda</Link>
+            <Link href="/dashboard/leads/tarefas" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700">Tarefas</Link>
+          </div>
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <KpiCard titulo="Hoje" valor={resumo?.agendamentos_hoje || 0} detalhe="Agendamentos do dia" icon={CalendarCheck2} tom="blue" href="/dashboard/agenda" />
+          <KpiCard titulo="Atrasadas" valor={resumo?.proximas_acoes_atrasadas || 0} detalhe="Resolver primeiro" icon={AlertTriangle} tom="red" href="/dashboard/leads/tarefas" />
+          <KpiCard titulo="Sem contato" valor={resumo?.leads_sem_contato || 0} detalhe="Primeiro contato" icon={PhoneCall} tom="orange" href="/dashboard/leads?filtro=sem-contato" />
+          <KpiCard titulo="Vendas pendentes" valor={resumo?.vendas_pendentes || 0} detalhe="Aprovação ADM" icon={ShieldCheck} tom="purple" href="/dashboard/kanban/vendas-pendentes" />
+          <KpiCard titulo="C2S" valor="Importar" detalhe="Atualizar base" icon={Users} tom="slate" href="/dashboard/c2s" />
+        </section>
+
+        <section className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
+          <ListaAcoes data={data} />
+          <PainelEquipe data={data} />
+        </section>
+
+        <section className="grid gap-5 xl:grid-cols-[1fr_1fr]">
+          <PremiumCard className="p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">Comando rápido</p>
+                <h2 className="mt-1 text-xl font-black text-slate-950">O que olhar agora</h2>
+              </div>
+              <Gauge className="h-8 w-8 text-blue-700" />
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <Link href="/dashboard/leads?filtro=sem-contato" className="rounded-3xl border border-red-100 bg-red-50 p-4"><p className="text-sm font-black text-slate-950">Leads sem primeiro contato</p><p className="mt-1 text-xs font-bold text-red-700">Evita perda por demora na abordagem.</p></Link>
+              <Link href="/dashboard/agenda" className="rounded-3xl border border-blue-100 bg-blue-50 p-4"><p className="text-sm font-black text-slate-950">Agenda do dia</p><p className="mt-1 text-xs font-bold text-blue-700">Confirmar visitas e próximos retornos.</p></Link>
+              <Link href="/dashboard/kanban/vendas-pendentes" className="rounded-3xl border border-orange-100 bg-orange-50 p-4"><p className="text-sm font-black text-slate-950">Vendas aguardando validação</p><p className="mt-1 text-xs font-bold text-orange-700">Fecha comissão e resultado do operador.</p></Link>
+              <Link href="/dashboard/usuarios/status" className="rounded-3xl border border-emerald-100 bg-emerald-50 p-4"><p className="text-sm font-black text-slate-950">Status da equipe</p><p className="mt-1 text-xs font-bold text-emerald-700">Disponíveis, pausas e bloqueios.</p></Link>
+            </div>
+          </PremiumCard>
+          <GraficoEvolucao serie={data.serie} />
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function DashboardEstrategicoGestao({ data }: { data: DashboardData }) {
+  const resumo = data.resumo;
+  const leads = Math.max(1, Number(resumo?.leads_ativos || 0));
+  const conversao = Math.round((Number(resumo?.vendas_confirmadas || 0) / leads) * 100);
+
+  return (
+    <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1760px] space-y-5">
+        <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.06)]">
+          <div className="grid gap-0 xl:grid-cols-[1fr_380px]">
+            <div className="p-6 lg:p-7">
+              <p className="text-xs font-black uppercase tracking-[0.28em] text-violet-700">Estratégico</p>
+              <h1 className="mt-2 text-3xl font-black tracking-[-0.05em] text-slate-950">Inteligência comercial e performance</h1>
+              <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-600">
+                Uma visão de decisão para ADM e supervisão: conversão, meta, vendas validadas, comissão, ranking saudável e gargalos do funil.
+              </p>
+              <div className="mt-6 grid gap-3 md:grid-cols-4">
+                <div className="rounded-3xl bg-violet-50 p-4"><p className="text-[10px] font-black uppercase text-violet-700">Conversão estimada</p><p className="mt-2 text-3xl font-black">{conversao}%</p><p className="mt-1 text-xs font-bold text-violet-700">Vendas / leads ativos</p></div>
+                <div className="rounded-3xl bg-emerald-50 p-4"><p className="text-[10px] font-black uppercase text-emerald-700">Vendas confirmadas</p><p className="mt-2 text-3xl font-black">{resumo?.vendas_confirmadas || 0}</p><p className="mt-1 text-xs font-bold text-emerald-700">Resultado real</p></div>
+                <div className="rounded-3xl bg-blue-50 p-4"><p className="text-[10px] font-black uppercase text-blue-700">Comissão prevista</p><p className="mt-2 text-2xl font-black">{formatarDinheiro(resumo?.comissao_prevista)}</p><p className="mt-1 text-xs font-bold text-blue-700">Resgate em validação</p></div>
+                <div className="rounded-3xl bg-orange-50 p-4"><p className="text-[10px] font-black uppercase text-orange-700">Pendências</p><p className="mt-2 text-3xl font-black">{resumo?.vendas_pendentes || 0}</p><p className="mt-1 text-xs font-bold text-orange-700">Decisões em aberto</p></div>
+              </div>
+            </div>
+            <PainelComissao data={data} />
+          </div>
+        </section>
+
+        <section className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+          <GraficoEvolucao serie={data.serie} />
+          <PremiumCard className="p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-violet-700">Leitura estratégica</p>
+                <h2 className="mt-1 text-xl font-black text-slate-950">Gargalos comerciais</h2>
+              </div>
+              <Trophy className="h-8 w-8 text-violet-700" />
+            </div>
+            <div className="grid gap-3">
+              <div className="rounded-3xl border border-red-100 bg-red-50 p-4"><p className="text-sm font-black text-slate-950">Ações atrasadas</p><p className="mt-1 text-xs font-bold text-red-700">{resumo?.proximas_acoes_atrasadas || 0} retorno(s) precisam de atenção.</p></div>
+              <div className="rounded-3xl border border-orange-100 bg-orange-50 p-4"><p className="text-sm font-black text-slate-950">Vendas pendentes</p><p className="mt-1 text-xs font-bold text-orange-700">{resumo?.vendas_pendentes || 0} venda(s) ainda dependem de validação.</p></div>
+              <div className="rounded-3xl border border-blue-100 bg-blue-50 p-4"><p className="text-sm font-black text-slate-950">Leads sem contato</p><p className="mt-1 text-xs font-bold text-blue-700">{resumo?.leads_sem_contato || 0} oportunidade(s) ainda sem primeira abordagem.</p></div>
+            </div>
+          </PremiumCard>
+        </section>
+
+        <PainelEquipe data={data} />
+      </div>
+    </main>
+  );
+}
+
+function DashboardOperacionalOperador({ data }: { data: DashboardData }) {
+  const resumo = data.resumo;
+  return (
+    <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1760px] space-y-5">
+        <section className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.28em] text-orange-700">Minha operação</p>
+            <h1 className="mt-2 text-3xl font-black tracking-[-0.05em] text-slate-950">O que fazer agora</h1>
+            <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-600">
+              Tela rápida para ligação: próximos retornos, atrasos, agenda do dia e oportunidades mais importantes.
+            </p>
+          </div>
+          <Link href="/dashboard/leads/tarefas" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-sm font-black text-white">Abrir minhas tarefas</Link>
+        </section>
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <KpiCard titulo="Hoje" valor={resumo?.agendamentos_hoje || 0} detalhe="Agenda do dia" icon={CalendarCheck2} tom="blue" href="/dashboard/agenda" />
+          <KpiCard titulo="Atrasadas" valor={resumo?.proximas_acoes_atrasadas || 0} detalhe="Retornar primeiro" icon={AlertTriangle} tom="red" href="/dashboard/leads/tarefas" />
+          <KpiCard titulo="Semana" valor={resumo?.agendamentos_semana || 0} detalhe="Ritmo atual" icon={Gauge} tom="purple" href="/dashboard/agenda?periodo=semana" />
+          <KpiCard titulo="Pendentes" valor={resumo?.vendas_pendentes || 0} detalhe="Aguardando ADM" icon={WalletCards} tom="orange" href="/dashboard/kanban/vendas-pendentes" />
+          <KpiCard titulo="Confirmadas" valor={resumo?.vendas_confirmadas || 0} detalhe="Resultado validado" icon={Trophy} tom="emerald" href="/dashboard/kanban/vendas-feitas" />
+        </section>
+        <section className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
+          <ListaAcoes data={data} />
+          <GraficoEvolucao serie={data.serie} />
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function DashboardEstrategicoOperador({ data }: { data: DashboardData }) {
+  return (
+    <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1760px] space-y-5">
+        <section>
+          <p className="text-xs font-black uppercase tracking-[0.28em] text-violet-700">Minha evolução</p>
+          <h1 className="mt-2 text-3xl font-black tracking-[-0.05em] text-slate-950">Resultado, meta e comissão</h1>
+          <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-600">
+            Uma visão motivacional do seu mês: meta, progresso, comissão prevista e vendas confirmadas.
+          </p>
+        </section>
+        <section className="grid gap-5 xl:grid-cols-[1.05fr_0.62fr]">
+          <TermometroMeta data={data} />
+          <PainelComissao data={data} />
+        </section>
+        <GraficoEvolucao serie={data.serie} />
+      </div>
+    </main>
+  );
+}
+
+export function DashboardClient({ visaoInicial = "geral" }: { visaoInicial?: DashboardVisao }) {
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [erro, setErro] = useState("");
+  const [carregando, setCarregando] = useState(true);
+
+  useEffect(() => {
+    let ativo = true;
+
+    async function carregar() {
+      try {
+        setCarregando(true);
+        const resposta = await fetch("/api/metas/dashboard", { cache: "no-store" });
+        const json = (await resposta.json()) as DashboardData;
+
+        if (!resposta.ok || !json.ok) {
+          throw new Error(json.erro || "Não foi possível carregar a dashboard.");
+        }
+
+        if (ativo) {
+          setData(json);
+          setErro("");
+        }
+      } catch (error) {
+        if (ativo) setErro(error instanceof Error ? error.message : "Erro ao carregar dashboard.");
+      } finally {
+        if (ativo) setCarregando(false);
+      }
+    }
+
+    carregar();
+
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  if (carregando) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-slate-50 px-4 text-slate-950">
+        <div className="rounded-[28px] border border-slate-200 bg-white px-8 py-7 text-center shadow-xl">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-700" />
+          <p className="mt-3 text-sm font-black text-slate-600">Carregando dashboard comercial...</p>
+        </div>
+      </main>
     );
   }
 
-  function goTo(tab: string) {
-    const rota = tabRoutes[tab];
-
-    if (rota && rota !== "/dashboard") {
-      router.push(rota);
-      return;
-    }
-
-    setPainel(montarPainel(getTabLabel(tab), "Você está na visão principal da dashboard operacional.", rota));
+  if (erro || !data) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-slate-50 px-4 text-slate-950">
+        <div className="max-w-lg rounded-[28px] border border-red-200 bg-red-50 px-8 py-7 text-center shadow-xl">
+          <AlertTriangle className="mx-auto h-8 w-8 text-red-700" />
+          <p className="mt-3 text-sm font-black text-red-700">{erro || "Dashboard indisponível."}</p>
+        </div>
+      </main>
+    );
   }
 
-  function baixarRelatorio() {
-    exportarCsv("flow-sales-dashboard.csv", [
-      ["Indicador", "Valor", "Variação"],
-      ...metrics.map((metric) => [metric.title, metric.value, metric.detail]),
-      ["Total de visitas na loja", "19", "11,8%"],
-      ["Vendas validadas", "34", "13,3%"],
-      ["Faturamento", "3.325.900", "16,8%"],
-    ]);
+  if (data.modo === "gestao") {
+    if (visaoInicial === "operacional") return <DashboardOperacionalGestao data={data} />;
+    if (visaoInicial === "estrategico") return <DashboardEstrategicoGestao data={data} />;
+    return <DashboardGeralGestao data={data} />;
   }
 
-  return (
-    <main
-      className="px-4 py-5 sm:px-6"
-      onClick={() => {
-        setDropdownAberto(null);
-      }}
-    >
-      <section className="mb-4 flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-            Dashboard operacional
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Visão estratégica e operacional da recuperação de vendas
-          </p>
-        </div>
-
-        <div className="relative flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              setDropdownAberto((atual) => (atual === "periodo" ? null : "periodo"));
-            }}
-            className="flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-          >
-            <CalendarDays className="h-4 w-4 text-slate-500" />
-            Período 16/05/2024 - 22/05/2024
-            <ChevronDown className="h-4 w-4 text-slate-400" />
-          </button>
-
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              setDropdownAberto((atual) => (atual === "filtros" ? null : "filtros"));
-            }}
-            className="flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-          >
-            Filtros
-            <Filter className="h-4 w-4 text-slate-500" />
-          </button>
-
-          {dropdownAberto ? (
-            <div
-              className="absolute right-0 top-12 z-30 w-[280px] rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl"
-              onClick={(event) => event.stopPropagation()}
-            >
-              {dropdownAberto === "periodo" ? (
-                <div className="grid gap-2">
-                  {["Hoje", "Esta semana", "Este mês", "Últimos 30 dias", "Personalizado"].map((periodo) => (
-                    <button
-                      key={periodo}
-                      type="button"
-                      onClick={() => {
-                        setDropdownAberto(null);
-                        abrirPainel("relatorios", "Período aplicado", `Filtro de período selecionado: ${periodo}.`);
-                      }}
-                      className="rounded-xl border border-slate-100 px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:border-blue-200 hover:bg-blue-50"
-                    >
-                      {periodo}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-
-              {dropdownAberto === "filtros" ? (
-                <div className="grid gap-2">
-                  {["Leads sem contato", "Vendas pendentes", "Agendamentos de hoje", "Conferência pendente", "Alta conversão"].map((filtro) => (
-                    <button
-                      key={filtro}
-                      type="button"
-                      onClick={() => {
-                        setDropdownAberto(null);
-                        abrirPainel("leads-ativos", "Filtro aplicado", `Filtro preparado: ${filtro}.`);
-                      }}
-                      className="rounded-xl border border-slate-100 px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:border-blue-200 hover:bg-blue-50"
-                    >
-                      {filtro}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-      </section>
-
-      <section className="grid gap-3 xl:grid-cols-6">
-        {metrics.map((metric) => {
-          const Icon = metric.icon;
-          const TrendIcon = metric.positive ? TrendingUp : TrendingDown;
-
-          return (
-            <button
-              key={metric.title}
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                abrirPainel(metric.tab, metric.title, `Indicador ${metric.title}: ${metric.value}. ${metric.detail}.`, ["Clique em abrir módulo para ver detalhes e registros."]);
-              }}
-              className="rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${getToneClasses(metric.tone)}`}>
-                  <Icon className="h-6 w-6" />
-                </div>
-                <span className="flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 text-[11px] font-bold text-slate-400">
-                  i
-                </span>
-              </div>
-              <p className="mt-3 text-xs font-semibold text-slate-500">{metric.title}</p>
-              <strong className="mt-1 block text-2xl font-bold text-slate-950">{metric.value}</strong>
-              <p className={`mt-2 flex items-center gap-1 text-xs font-semibold ${metric.positive ? "text-emerald-600" : "text-red-600"}`}>
-                <TrendIcon className="h-3.5 w-3.5" />
-                {metric.detail}
-              </p>
-            </button>
-          );
-        })}
-      </section>
-
-      <section className="mt-4 grid gap-4 xl:grid-cols-[1.55fr_1fr_0.92fr]">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-bold text-slate-950">Leads e agendamentos ao longo do tempo</h2>
-              <div className="mt-3 flex flex-wrap gap-4 text-xs font-semibold text-slate-500">
-                <span className="flex items-center gap-2"><span className="h-2 w-4 rounded-full bg-blue-700" /> Leads criados</span>
-                <span className="flex items-center gap-2"><span className="h-2 w-4 rounded-full bg-cyan-500" /> Agendamentos</span>
-                <span className="flex items-center gap-2"><span className="h-2 w-4 rounded-full bg-indigo-400" /> Visitas na loja</span>
-              </div>
-            </div>
-            <div className="flex overflow-hidden rounded-xl border border-slate-200 text-xs font-semibold">
-              {["Diário", "Semanal", "Mensal"].map((item, index) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    goTo("relatorios");
-                  }}
-                  className={`px-4 py-2 ${index === 0 ? "bg-blue-50 text-blue-700" : "bg-white text-slate-500 hover:bg-slate-50"}`}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              abrirPainel("relatorios", "Gráfico de evolução", "Comparativo entre leads criados, agendamentos e visitas na loja no período selecionado.", ["Linha azul: leads criados", "Linha ciano: agendamentos", "Linha lilás: visitas na loja"]);
-            }}
-            onMouseLeave={() => setGraficoHover(null)}
-            className="relative h-[250px] w-full overflow-hidden rounded-xl bg-gradient-to-b from-white to-slate-50 text-left"
-          >
-            <svg viewBox="0 0 660 190" className="h-full w-full">
-              {[30, 70, 110, 150].map((y) => (
-                <line key={y} x1="20" y1={y} x2="640" y2={y} stroke="#e2e8f0" strokeDasharray="4 5" />
-              ))}
-              <polyline points={linePoints.map((point) => `${point.x},${point.y}`).join(" ")} fill="none" stroke="#2563eb" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-              <polyline points="25,155 110,145 195,151 280,139 365,150 450,118 535,154 620,142" fill="none" stroke="#22c7d8" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-              <polyline points="25,88 110,60 195,72 280,96 365,68 450,46 535,95 620,75" fill="none" stroke="#818cf8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              <g className="opacity-0 transition-opacity hover:opacity-100">
-                <circle cx="450" cy="66" r="6" fill="#2563eb" />
-                <rect x="460" y="48" width="136" height="82" rx="10" fill="white" stroke="#e2e8f0" />
-                <text x="476" y="70" fontSize="12" fontWeight="700" fill="#0f172a">20/05/2024</text>
-                <text x="476" y="91" fontSize="11" fill="#334155">Leads criados 162</text>
-                <text x="476" y="109" fontSize="11" fill="#334155">Agendamentos 41</text>
-                <text x="476" y="127" fontSize="11" fill="#334155">Visitas na loja 27</text>
-              </g>
-              {linePoints.map((point, index) => (
-                <circle key={`lead-${index}`} cx={point.x} cy={point.y} r="12" fill="transparent" onMouseEnter={() => setGraficoHover(montarPainel("Leads criados", `${150 + index * 8} leads criados no dia ${16 + index}/05.`, "/dashboard/relatorios"))} />
-              ))}
-              {[25, 110, 195, 280, 365, 450, 535, 620].map((x, index) => (
-                <circle key={`agendamento-${index}`} cx={x} cy={[155, 145, 151, 139, 150, 118, 154, 142][index]} r="12" fill="transparent" onMouseEnter={() => setGraficoHover(montarPainel("Agendamentos", `${22 + index * 3} agendamentos no dia ${16 + index}/05.`, "/dashboard/agenda"))} />
-              ))}
-              {[25, 110, 195, 280, 365, 450, 535, 620].map((x, index) => (
-                <circle key={`visita-${index}`} cx={x} cy={[88, 60, 72, 96, 68, 46, 95, 75][index]} r="12" fill="transparent" onMouseEnter={() => setGraficoHover(montarPainel("Visitas na loja", `${12 + index * 2} visitas no dia ${16 + index}/05.`, "/dashboard/agenda"))} />
-              ))}
-            </svg>
-            {graficoHover ? (
-              <div className="absolute right-6 top-6 max-w-[230px] rounded-xl border border-slate-200 bg-white p-3 text-xs font-semibold text-slate-700 shadow-xl">
-                <strong className="mb-1 block text-slate-950">{graficoHover.titulo}</strong>
-                {graficoHover.descricao}
-              </div>
-            ) : null}
-          </button>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="font-bold text-slate-950">Funil de recuperação</h2>
-          <div className="mt-4 space-y-2.5">
-            {funnel.map((item) => (
-              <button
-                key={item.label}
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  abrirPainel(item.tab, item.label, `${item.label}: ${item.value} leads (${item.percent}) no funil de recuperação.`, ["Abrir módulo para filtrar essa etapa."]);
-                }}
-                className="relative h-10 w-full overflow-hidden rounded-xl bg-slate-50 text-left transition hover:ring-2 hover:ring-blue-100"
-              >
-                <div className={`absolute inset-y-0 left-0 rounded-xl ${item.color}`} style={{ width: item.width }} />
-                <div className="relative flex h-full items-center justify-between px-3 text-xs font-bold">
-                  <span>{item.label}</span>
-                  <span className="text-slate-600">{item.value} ({item.percent})</span>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center gap-2">
-            <AlarmClock className="h-5 w-5 text-red-500" />
-            <h2 className="font-bold text-slate-950">Ações urgentes</h2>
-          </div>
-          <div className="space-y-2.5">
-            {urgentActions.map((item) => (
-              <button
-                key={item.label}
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  abrirPainel(item.tab, item.label, `Ação urgente com ${item.value} registros pendentes.`, ["Abrir módulo", "Priorizar atendimento", "Filtrar responsáveis"]);
-                }}
-                className="flex w-full items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-white"
-              >
-                {item.label}
-                <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${item.color}`}>{item.value}</span>
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              goTo("acoes-urgentes");
-            }}
-            className="mt-4 flex w-full items-center justify-between text-sm font-bold text-blue-700"
-          >
-            Ver todos <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-      </section>
-
-      <section className="mt-4 grid gap-4 xl:grid-cols-[0.92fr_1.45fr_0.72fr_0.92fr]">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 font-bold text-slate-950"><CalendarDays className="h-5 w-5 text-blue-700" /> Agenda de hoje</h2>
-            <button type="button" onClick={(event) => { event.stopPropagation(); goTo("agenda-hoje"); }} className="rounded-lg bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">Ver agenda</button>
-          </div>
-          <div className="space-y-3">
-            {appointments.map((item) => (
-              <button key={`${item.time}-${item.name}`} type="button" onClick={(event) => { event.stopPropagation(); goTo(item.tab); }} className="grid w-full grid-cols-[54px_1fr_auto] items-center gap-3 rounded-xl px-2 py-1.5 text-left transition hover:bg-slate-50">
-                <span className="text-sm font-bold text-slate-900">{item.time}</span>
-                <span>
-                  <span className="block text-sm font-bold text-slate-800">{item.name}</span>
-                  <span className="block text-xs text-slate-500">{item.car}</span>
-                </span>
-                <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">{item.badge}</span>
-              </button>
-            ))}
-          </div>
-          <button type="button" onClick={(event) => { event.stopPropagation(); goTo("agenda-hoje"); }} className="mt-4 flex w-full items-center justify-between border-t border-slate-100 pt-3 text-sm font-bold text-blue-700">Ver todos agendamentos <ChevronRight className="h-4 w-4" /></button>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="flex items-center gap-2 font-bold text-slate-950"><WalletCards className="h-5 w-5 text-slate-500" /> Prévia do Kanban</h2>
-            <button type="button" onClick={(event) => { event.stopPropagation(); goTo("kanban-funil"); }} className="rounded-lg bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">Ver kanban completo</button>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
-            {kanban.map((column) => (
-              <button key={column.title} type="button" onClick={(event) => { event.stopPropagation(); goTo("kanban-funil"); }} className="min-h-[245px] rounded-2xl border border-slate-100 bg-slate-50 p-3 text-left transition hover:border-blue-200 hover:bg-white">
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <h3 className="text-sm font-bold text-slate-800">{column.title}</h3>
-                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-blue-700 ring-1 ring-slate-200">{column.count}</span>
-                </div>
-                <div className="space-y-2.5">
-                  {column.cards.map((card) => (
-                    <div key={card.name} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-                      <p className="text-sm font-bold text-slate-900">{card.name}</p>
-                      <p className="mt-1 text-xs text-slate-500">{card.car}</p>
-                      <p className="mt-2 text-xs font-semibold text-slate-500">{card.info}</p>
-                      <span className="mt-2 inline-flex rounded-full bg-orange-50 px-2 py-1 text-[11px] font-bold text-orange-700">{card.tag}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-3 rounded-xl bg-white py-2 text-center text-xs font-bold text-slate-500 ring-1 ring-slate-100">{column.footer}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="flex items-center gap-2 font-bold text-slate-950"><ShieldCheck className="h-5 w-5 text-blue-700" /> Conferência</h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
-            {[{ label: "Pendentes", value: 15, tab: "conferencia-veiculos" }, { label: "Divergências", value: 5, tab: "conferencia-divergencias" }, { label: "Aceitos", value: 28, tab: "conferencia-aceitos" }, { label: "Finalizados", value: 48, tab: "conferencia-veiculos" }].map((item) => (
-              <button key={item.label} type="button" onClick={(event) => { event.stopPropagation(); goTo(item.tab); }} className="rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-blue-200 hover:bg-blue-50/30">
-                <p className="text-sm text-slate-500">{item.label}</p>
-                <strong className="mt-2 block text-2xl text-slate-950">{item.value}</strong>
-              </button>
-            ))}
-          </div>
-          <button type="button" onClick={(event) => { event.stopPropagation(); goTo("conferencia-veiculos"); }} className="mt-4 flex w-full items-center justify-between text-sm font-bold text-blue-700">Ir para conferência <ChevronRight className="h-4 w-4" /></button>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 font-bold text-slate-950"><Building2 className="h-5 w-5 text-blue-700" /> Desempenho por unidade</h2>
-            <button type="button" onClick={(event) => { event.stopPropagation(); goTo("relatorios-unidades"); }} className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-bold text-slate-600">Este mês</button>
-          </div>
-          <button type="button" onClick={(event) => { event.stopPropagation(); goTo("relatorios-unidades"); }} className="h-[230px] w-full text-left">
-            <div className="flex h-full items-end gap-5 border-b border-l border-slate-200 px-4 pb-5">
-              {[820, 640, 560, 420].map((value, index) => (
-                <div key={value} className="flex flex-1 flex-col items-center gap-2">
-                  <span className="text-xs font-bold text-slate-700">{value}</span>
-                  <div className="flex h-[160px] items-end gap-1.5">
-                    <div className="w-5 rounded-t-md bg-blue-700" style={{ height: `${value / 8.2}%` }} onMouseEnter={() => setBarraHover(montarPainel(`Loja ${index + 1} - Leads`, `${value} leads no período selecionado.`, "/dashboard/relatorios?aba=unidades"))} onMouseLeave={() => setBarraHover(null)} />
-                    <div className="w-5 rounded-t-md bg-cyan-500" style={{ height: `${(156 - index * 24) / 2}%` }} onMouseEnter={() => setBarraHover(montarPainel(`Loja ${index + 1} - Vendas`, `${156 - index * 24} vendas validadas no período.`, "/dashboard/relatorios?aba=unidades"))} onMouseLeave={() => setBarraHover(null)} />
-                  </div>
-                  <span className="text-xs font-semibold text-slate-500">Loja {index + 1}</span>
-                </div>
-              ))}
-            </div>
-          </button>
-          {barraHover ? (
-            <div className="mt-2 rounded-xl border border-slate-200 bg-white p-3 text-xs font-semibold text-slate-700 shadow-sm">
-              <strong className="block text-slate-950">{barraHover.titulo}</strong>
-              {barraHover.descricao}
-            </div>
-          ) : null}
-          <button type="button" onClick={(event) => { event.stopPropagation(); abrirPainel("relatorios-unidades", "Relatório por unidade", "Comparativo de leads e vendas validadas por unidade.", ["Loja 1", "Loja 2", "Loja 3", "Loja 4"]); }} className="mt-4 flex w-full items-center justify-between text-sm font-bold text-blue-700">Ver relatório completo <ChevronRight className="h-4 w-4" /></button>
-        </div>
-      </section>
-
-      <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto] xl:items-center">
-          {[
-            ["Total de leads no período", "1.248", "12,5%"],
-            ["Total de visitas na loja", "19", "11,8%"],
-            ["Vendas validadas", "34", "13,3%"],
-            ["Ticket médio (R$)", "97.850", "5,1%"],
-            ["Faturamento (R$)", "3.325.900", "16,8%"],
-          ].map(([label, value, change]) => (
-            <button key={label} type="button" onClick={(event) => { event.stopPropagation(); goTo("relatorios"); }} className="border-slate-100 text-left xl:border-r xl:pr-4">
-              <p className="text-sm text-slate-500">{label}</p>
-              <p className="mt-1 text-xl font-bold text-slate-950">{value} <span className="ml-1 text-sm font-bold text-emerald-600">↑ {change}</span></p>
-            </button>
-          ))}
-          <button type="button" onClick={(event) => { event.stopPropagation(); baixarRelatorio(); }} className="h-12 rounded-xl bg-blue-700 px-5 text-sm font-bold text-white shadow-lg shadow-blue-700/20 transition hover:bg-blue-800"><Download className="mr-2 inline h-4 w-4" />Exportar relatório</button>
-        </div>
-      </section>
-
-      {painel ? (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/25 px-4 backdrop-blur-sm" onClick={() => setPainel(null)}>
-          <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl" onClick={(event) => event.stopPropagation()}>
-            <div className="mb-4 flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-bold text-slate-950">{painel.titulo}</h2>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{painel.descricao}</p>
-              </div>
-              <button type="button" onClick={() => setPainel(null)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button>
-            </div>
-
-            {painel.itens?.length ? (
-              <div className="mb-5 grid gap-2">
-                {painel.itens.map((item) => (
-                  <div key={item} className="rounded-xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">{item}</div>
-                ))}
-              </div>
-            ) : null}
-
-            <div className="flex flex-wrap justify-end gap-3">
-              <button type="button" onClick={() => setPainel(null)} className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 hover:bg-slate-50">Fechar</button>
-              {painel.rota ? (
-                <button type="button" onClick={() => { const rota = painel.rota; setPainel(null); if (rota) router.push(rota); }} className="inline-flex h-11 items-center gap-2 rounded-xl bg-blue-700 px-4 text-sm font-bold text-white hover:bg-blue-800">
-                  Abrir módulo <ExternalLink className="h-4 w-4" />
-                </button>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      ) : null}
-    </main>
-  );
+  if (visaoInicial === "operacional") return <DashboardOperacionalOperador data={data} />;
+  if (visaoInicial === "estrategico") return <DashboardEstrategicoOperador data={data} />;
+  return <DashboardOperador data={data} />;
 }

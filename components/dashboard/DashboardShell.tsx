@@ -288,7 +288,7 @@ function statusDotClass(status?: string | null) {
   return "bg-slate-300";
 }
 
-export function DashboardShell({ usuario, activeTab = "dashboard-geral", children }: DashboardShellProps) {
+export function DashboardShell({ usuario, activeTab, children }: DashboardShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -502,7 +502,15 @@ export function DashboardShell({ usuario, activeTab = "dashboard-geral", childre
             <div className="space-y-1.5">
               {itensVisiveis.map((item) => {
                 const Icon = item.icon;
-                const isActive = item.subitems.some((sub) => hrefAtivo(pathname, sub.href)) || activeTab === item.tab || hrefAtivo(pathname, item.href);
+                const isDashboardPrincipal = item.href === "/dashboard";
+const itemAtivo = isDashboardPrincipal
+  ? pathname === "/dashboard"
+  : hrefAtivo(pathname, item.href);
+
+const isActive =
+  item.subitems.some((sub) => hrefAtivo(pathname, sub.href)) ||
+  Boolean(activeTab && activeTab === item.tab) ||
+  itemAtivo;
                 const isOpen = openMenus.includes(item.label);
 
                 return (
@@ -525,7 +533,9 @@ export function DashboardShell({ usuario, activeTab = "dashboard-geral", childre
                     {menuAberto && isOpen ? (
                       <div className="ml-6 mt-1 space-y-1 border-l border-slate-200 pl-3">
                         {item.subitems.map((subitem) => {
-                          const childAtivo = hrefAtivo(pathname, subitem.href) || activeTab === subitem.tab;
+                          const childAtivo =
+  hrefAtivo(pathname, subitem.href) ||
+  Boolean(activeTab && activeTab === subitem.tab);
 
                           return (
                             <Link

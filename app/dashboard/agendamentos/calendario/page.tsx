@@ -1,10 +1,5 @@
-import { ModulePlaceholder } from "@/components/dashboard/ModulePlaceholder";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return (
-    <ModulePlaceholder
-      title="Calendário"
-      description="Calendário preparado para visão diária, semanal e mensal."
-    />
-  );
+  redirect("/dashboard/agenda");
 }

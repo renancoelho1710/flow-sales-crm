@@ -1,6 +1,5 @@
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { LeadDetalheClient } from "./LeadDetalheClient";
 
 type PageProps = {
@@ -56,13 +55,14 @@ export default async function Page({ params }: PageProps) {
     .order("nome", { ascending: true });
 
   return (
-    <DashboardShell usuario={usuarioInterno} activeTab="leads-ativos">
+    
       <LeadDetalheClient
         leadInicial={lead}
         interacoesIniciais={interacoes || []}
         usuario={usuarioInterno}
         usuariosAtivos={usuariosAtivos || []}
       />
-    </DashboardShell>
+    
   );
 }
+

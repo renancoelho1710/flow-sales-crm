@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { SolicitacoesLeadsClient } from "./SolicitacoesLeadsClient";
 
 export default async function Page() {
@@ -35,13 +34,14 @@ export default async function Page() {
     .limit(80);
 
   return (
-    <DashboardShell usuario={usuarioInterno} activeTab="solicitacoes-leads">
+    
       <SolicitacoesLeadsClient
         usuario={usuarioInterno}
         podeAnalisar={podeAnalisar}
         solicitacoes={solicitacoes || []}
         erroInicial={error?.message || ""}
       />
-    </DashboardShell>
+    
   );
 }
+

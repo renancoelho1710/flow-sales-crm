@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { NovoLeadClient } from "./NovoLeadClient";
 
 export default async function Page() {
@@ -26,8 +25,9 @@ export default async function Page() {
   }
 
   return (
-    <DashboardShell usuario={usuarioInterno} activeTab="novo-lead">
+    
       <NovoLeadClient />
-    </DashboardShell>
+    
   );
 }
+

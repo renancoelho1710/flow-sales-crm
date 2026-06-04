@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   CalendarClock,
@@ -59,6 +59,9 @@ type Lead = {
   vendedor_id: string | null;
   vendedor_nome: string | null;
   vendedor_email: string | null;
+  vendedor_c2s_nome?: string | null;
+  loja_carteira_c2s_nome?: string | null;
+  loja_visita_nome?: string | null;
   vendedor_definido_em: string | null;
   vendedor_definido_por: string | null;
   vendedor_troca_bloqueada: boolean | null;
@@ -73,6 +76,39 @@ type Interacao = {
   resultado: string | null;
   observacao: string | null;
   criado_em: string;
+};
+
+type VendedorComercial = {
+  id: string;
+  nome: string;
+  loja: string | null;
+  telefone_particular: string | null;
+  telefone_corporativo: string | null;
+  ativo: boolean;
+  recebe_agendamento: boolean;
+  situacao_operacional: string | null;
+};
+
+type PeriodoAgenda = "manha" | "tarde" | "noite";
+
+type DisponibilidadePeriodo = {
+  periodo: PeriodoAgenda;
+  ativo: boolean;
+  limite: number;
+  usado: number;
+  livre: number;
+  cheio: boolean;
+  bloqueado: boolean;
+  motivo_bloqueio: string | null;
+  disponivel: boolean;
+};
+
+type DisponibilidadeDia = {
+  ok: boolean;
+  data: string;
+  vendedor?: VendedorComercial;
+  periodos?: Record<PeriodoAgenda, DisponibilidadePeriodo>;
+  erro?: string;
 };
 
 type Props = {
@@ -165,6 +201,21 @@ function telefoneWhatsapp(lead: Lead) {
   return `55${digits}`;
 }
 
+function normalizarBusca(valor: string | null | undefined) {
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function nomesVendedorLead(lead: Lead) {
+  return [lead.vendedor_nome, lead.vendedor_c2s_nome]
+    .filter(Boolean)
+    .map((valor) => String(valor));
+}
+
 function corTemperatura(valor: string) {
   const temperatura = valor.toLowerCase();
 
@@ -248,6 +299,51 @@ function podeAlterarVendedor(perfil: string | null | undefined) {
 }
 
 
+function dataIsoLocal(data: Date) {
+  const ano = data.getFullYear();
+  const mes = String(data.getMonth() + 1).padStart(2, "0");
+  const dia = String(data.getDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+}
+
+function labelDataRapida(dataIso: string) {
+  const [ano, mes, dia] = dataIso.split("-").map(Number);
+  const data = new Date(ano, mes - 1, dia);
+  const hoje = new Date();
+  const amanha = new Date();
+  amanha.setDate(amanha.getDate() + 1);
+
+  if (dataIsoLocal(data) === dataIsoLocal(hoje)) return "Hoje";
+  if (dataIsoLocal(data) === dataIsoLocal(amanha)) return "Amanhã";
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+  }).format(data);
+}
+
+function periodoLabel(periodo: PeriodoAgenda) {
+  if (periodo === "manha") return "Manhã";
+  if (periodo === "tarde") return "Tarde";
+  return "Noite";
+}
+
+function horaPadraoPeriodo(periodo: PeriodoAgenda) {
+  if (periodo === "manha") return "09:00";
+  if (periodo === "tarde") return "14:00";
+  return "18:30";
+}
+
+function proximosDias(qtd = 10) {
+  return Array.from({ length: qtd }).map((_, index) => {
+    const data = new Date();
+    data.setDate(data.getDate() + index);
+    return dataIsoLocal(data);
+  });
+}
+
+
 export function LeadDetalheClient({ leadInicial, interacoesIniciais, usuario, usuariosAtivos }: Props) {
   const [lead, setLead] = useState(leadInicial);
   const [interacoes, setInteracoes] = useState(interacoesIniciais);
@@ -263,6 +359,16 @@ export function LeadDetalheClient({ leadInicial, interacoesIniciais, usuario, us
   const [vendedorSelecionado, setVendedorSelecionado] = useState(leadInicial.vendedor_id || "");
   const [motivoVendedor, setMotivoVendedor] = useState("");
   const [salvandoVendedor, setSalvandoVendedor] = useState(false);
+  const [vendedoresComerciais, setVendedoresComerciais] = useState<VendedorComercial[]>([]);
+  const [vendedorAgendaId, setVendedorAgendaId] = useState("");
+  const [dataAgenda, setDataAgenda] = useState(() => dataIsoLocal(new Date()));
+  const [periodoAgenda, setPeriodoAgenda] = useState<PeriodoAgenda>("tarde");
+  const [tipoAgenda, setTipoAgenda] = useState("visita");
+  const [observacaoAgenda, setObservacaoAgenda] = useState("");
+  const [disponibilidade, setDisponibilidade] = useState<DisponibilidadeDia | null>(null);
+  const [carregandoVendedores, setCarregandoVendedores] = useState(false);
+  const [carregandoDisponibilidade, setCarregandoDisponibilidade] = useState(false);
+  const [salvandoAgenda, setSalvandoAgenda] = useState(false);
 
   const whatsapp = useMemo(() => telefoneWhatsapp(lead), [lead]);
 
@@ -285,6 +391,120 @@ export function LeadDetalheClient({ leadInicial, interacoesIniciais, usuario, us
       String(item.perfil || "").toLowerCase()
     )
   );
+  const nomesDoVendedorDoLead = useMemo(() => nomesVendedorLead(lead), [lead]);
+  const vendedorAgenda = useMemo(
+    () => vendedoresComerciais.find((item) => item.id === vendedorAgendaId) || null,
+    [vendedorAgendaId, vendedoresComerciais]
+  );
+  const vendedorAgendaNome = vendedorAgenda?.nome || nomesDoVendedorDoLead[0] || "Sem vendedor vinculado";
+
+
+  useEffect(() => {
+    async function carregarVendedoresComerciais() {
+      try {
+        setCarregandoVendedores(true);
+        const resposta = await fetch("/api/agenda/vendedores", { cache: "no-store" });
+        const dados = await resposta.json().catch(() => null);
+        if (!resposta.ok || !dados?.ok) return;
+
+        const lista = (dados.vendedores || []) as VendedorComercial[];
+        setVendedoresComerciais(lista);
+
+        const nomesNormalizados = nomesVendedorLead(lead).map(normalizarBusca);
+        const vendedorDoLead = lista.find((item) =>
+          nomesNormalizados.includes(normalizarBusca(item.nome))
+        );
+
+        if (vendedorDoLead) {
+          setVendedorAgendaId(vendedorDoLead.id);
+        } else {
+          setVendedorAgendaId("");
+        }
+      } finally {
+        setCarregandoVendedores(false);
+      }
+    }
+
+    carregarVendedoresComerciais();
+  }, [lead]);
+
+  async function consultarDisponibilidade(vendedorId = vendedorAgendaId, data = dataAgenda) {
+    if (!vendedorId || !data) return;
+
+    setCarregandoDisponibilidade(true);
+    setErro("");
+
+    try {
+      const params = new URLSearchParams({ vendedor_id: vendedorId, data });
+      const resposta = await fetch(`/api/agenda/disponibilidade?${params.toString()}`, { cache: "no-store" });
+      const dados = (await resposta.json().catch(() => null)) as DisponibilidadeDia | null;
+
+      if (!resposta.ok || !dados?.ok) {
+        throw new Error(dados?.erro || "Não foi possível consultar a agenda do vendedor.");
+      }
+
+      setDisponibilidade(dados);
+
+      const periodos: PeriodoAgenda[] = ["manha", "tarde", "noite"];
+      const primeiroDisponivel = periodos.find((periodo) => dados.periodos?.[periodo]?.disponivel);
+      if (primeiroDisponivel) setPeriodoAgenda(primeiroDisponivel);
+    } catch (error) {
+      setDisponibilidade(null);
+      setErro(error instanceof Error ? error.message : "Não foi possível consultar a agenda do vendedor.");
+    } finally {
+      setCarregandoDisponibilidade(false);
+    }
+  }
+
+  async function salvarAgendamentoInteligente() {
+    if (!vendedorAgendaId) {
+      setErro("Este lead ainda não tem vendedor C2S localizado na agenda. Acione ADM/Supervisão para vincular o vendedor correto.");
+      return;
+    }
+
+    const periodoInfo = disponibilidade?.periodos?.[periodoAgenda];
+    if (periodoInfo && !periodoInfo.disponivel) {
+      setErro("Este período não está disponível para o vendedor selecionado.");
+      return;
+    }
+
+    setSalvandoAgenda(true);
+    setMensagem("");
+    setErro("");
+
+    try {
+      const resposta = await fetch("/api/agenda/agendar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lead_id: lead.id,
+          vendedor_comercial_id: vendedorAgendaId,
+          data: dataAgenda,
+          periodo: periodoAgenda,
+          horario: horaPadraoPeriodo(periodoAgenda),
+          tipo: tipoAgenda,
+          observacao: observacaoAgenda,
+        }),
+      });
+
+      const dados = await resposta.json().catch(() => null);
+      if (!resposta.ok || !dados?.ok) {
+        throw new Error(dados?.erro || "Não foi possível salvar o agendamento.");
+      }
+
+      if (dados.lead) setLead(dados.lead);
+      if (dados.interacao) setInteracoes((atual) => [dados.interacao, ...atual]);
+
+      setMensagem("Agendamento criado com sucesso e incluído na agenda operacional.");
+      setObservacaoAgenda("");
+      await consultarDisponibilidade(vendedorAgendaId, dataAgenda);
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : "Não foi possível salvar o agendamento.");
+      await consultarDisponibilidade(vendedorAgendaId, dataAgenda);
+    } finally {
+      setSalvandoAgenda(false);
+    }
+  }
 
   function atualizar(campo: keyof typeof form, valor: string) {
     setForm((atual) => ({ ...atual, [campo]: valor }));
@@ -618,6 +838,204 @@ export function LeadDetalheClient({ leadInicial, interacoesIniciais, usuario, us
                 </p>
               </div>
             )}
+          </div>
+
+        </section>
+
+        <section className="mb-5 overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-sm">
+          <div className="flex flex-col justify-between gap-4 border-b border-blue-100 bg-blue-50 px-5 py-4 lg:flex-row lg:items-center">
+            <div>
+              <h2 className="flex items-center gap-2 text-base font-black text-slate-950">
+                <CalendarClock className="h-5 w-5 text-blue-700" />
+                Agendamento inteligente
+              </h2>
+              <p className="mt-1 text-sm font-semibold leading-6 text-slate-600">
+                Consulte a disponibilidade do vendedor durante a ligação e agende apenas em períodos com vaga.
+              </p>
+            </div>
+
+            <span className="rounded-full border border-blue-200 bg-white px-3 py-1 text-xs font-black text-blue-700">
+              Trava por capacidade
+            </span>
+          </div>
+
+          <div className="grid gap-4 p-5 xl:grid-cols-[0.9fr_1.1fr]">
+            <div className="grid gap-3">
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="grid gap-2">
+                  <span className="text-xs font-black uppercase tracking-wide text-blue-700">Vendedor do lead</span>
+                  {podeGerenciarVendedor ? (
+                    <select
+                      value={vendedorAgendaId}
+                      disabled={carregandoVendedores}
+                      onChange={(event) => {
+                        setVendedorAgendaId(event.target.value);
+                        setDisponibilidade(null);
+                      }}
+                      className="h-11 rounded-xl border border-blue-200 bg-white px-3 text-sm font-semibold outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                    >
+                      <option value="">Selecione o vendedor</option>
+                      {vendedoresComerciais
+                        .filter((item) => item.ativo && item.recebe_agendamento)
+                        .map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.nome} {item.loja ? `• Loja ${item.loja}` : ""}
+                          </option>
+                        ))}
+                    </select>
+                  ) : (
+                    <div className="flex h-11 items-center rounded-xl border border-blue-200 bg-slate-50 px-3 text-sm font-black text-slate-800">
+                      {carregandoVendedores ? "Localizando vendedor..." : vendedorAgendaNome}
+                    </div>
+                  )}
+                  {!podeGerenciarVendedor ? (
+                    <span className="text-[11px] font-bold text-slate-500">
+                      Operador agenda somente para o vendedor dono do lead no C2S. Troca de vendedor é feita pela supervisão/ADM.
+                    </span>
+                  ) : null}
+                </label>
+
+                <label className="grid gap-2">
+                  <span className="text-xs font-black uppercase tracking-wide text-blue-700">Data</span>
+                  <input
+                    type="date"
+                    value={dataAgenda}
+                    onChange={(event) => {
+                      setDataAgenda(event.target.value);
+                      setDisponibilidade(null);
+                    }}
+                    className="h-11 rounded-xl border border-blue-200 bg-white px-3 text-sm font-semibold outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                  />
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                {proximosDias(5).map((data) => (
+                  <button
+                    key={data}
+                    type="button"
+                    onClick={() => {
+                      setDataAgenda(data);
+                      consultarDisponibilidade(vendedorAgendaId, data);
+                    }}
+                    disabled={!vendedorAgendaId}
+                    className={`rounded-xl border px-3 py-2 text-xs font-black transition ${dataAgenda === data ? "border-blue-600 bg-blue-700 text-white" : "border-slate-200 bg-white text-slate-700 hover:bg-blue-50"} disabled:cursor-not-allowed disabled:opacity-50`}
+                  >
+                    {labelDataRapida(data)}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => consultarDisponibilidade()}
+                disabled={!vendedorAgendaId || carregandoDisponibilidade}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-black text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {carregandoDisponibilidade ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clock3 className="h-4 w-4" />}
+                Ver agenda do vendedor
+              </button>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="grid gap-2">
+                  <span className="text-xs font-black uppercase tracking-wide text-slate-500">Tipo</span>
+                  <select
+                    value={tipoAgenda}
+                    onChange={(event) => setTipoAgenda(event.target.value)}
+                    className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                  >
+                    <option value="visita">Visita</option>
+                    <option value="test_drive">Test drive</option>
+                    <option value="retorno">Retorno</option>
+                    <option value="entrega">Entrega</option>
+                  </select>
+                </label>
+
+                <label className="grid gap-2">
+                  <span className="text-xs font-black uppercase tracking-wide text-slate-500">Período escolhido</span>
+                  <select
+                    value={periodoAgenda}
+                    onChange={(event) => setPeriodoAgenda(event.target.value as PeriodoAgenda)}
+                    className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                  >
+                    <option value="manha">Manhã</option>
+                    <option value="tarde">Tarde</option>
+                    <option value="noite">Noite</option>
+                  </select>
+                </label>
+              </div>
+
+              <label className="grid gap-2">
+                <span className="text-xs font-black uppercase tracking-wide text-slate-500">Observação do agendamento</span>
+                <input
+                  value={observacaoAgenda}
+                  onChange={(event) => setObservacaoAgenda(event.target.value)}
+                  placeholder="Ex: Cliente confirmou visita no período da tarde"
+                  className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                />
+              </label>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wide text-slate-400">Disponibilidade</p>
+                  <p className="mt-1 text-sm font-black text-slate-950">{labelDataRapida(dataAgenda)}</p>
+                </div>
+                {disponibilidade?.vendedor ? (
+                  <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-600">
+                    {disponibilidade.vendedor.nome}
+                  </span>
+                ) : null}
+              </div>
+
+              {!disponibilidade ? (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm font-bold text-slate-500">
+                  O vendedor do lead será usado automaticamente. Clique em “Ver agenda do vendedor”.
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {(["manha", "tarde", "noite"] as PeriodoAgenda[]).map((periodo) => {
+                    const item = disponibilidade.periodos?.[periodo];
+                    const selecionado = periodoAgenda === periodo;
+                    return (
+                      <button
+                        key={periodo}
+                        type="button"
+                        onClick={() => item?.disponivel && setPeriodoAgenda(periodo)}
+                        disabled={!item?.disponivel}
+                        className={`rounded-2xl border p-4 text-left transition ${selecionado ? "border-blue-500 bg-blue-50 ring-4 ring-blue-100" : item?.disponivel ? "border-emerald-200 bg-white hover:bg-emerald-50" : "border-slate-200 bg-white opacity-75"}`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-black text-slate-950">{periodoLabel(periodo)}</p>
+                            <p className="mt-1 text-xs font-bold text-slate-500">
+                              {item ? `${item.usado}/${item.limite} ocupado • ${item.livre} vaga(s)` : "Sem configuração"}
+                            </p>
+                          </div>
+                          <span className={`rounded-full px-3 py-1 text-xs font-black ${item?.disponivel ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                            {item?.disponivel ? "Disponível" : item?.bloqueado ? "Bloqueado" : item?.cheio ? "Lotado" : "Indisponível"}
+                          </span>
+                        </div>
+                        {item?.motivo_bloqueio ? (
+                          <p className="mt-2 text-xs font-bold text-red-600">Motivo: {item.motivo_bloqueio}</p>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={salvarAgendamentoInteligente}
+                disabled={!vendedorAgendaId || !disponibilidade || salvandoAgenda}
+                className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-sm font-black text-white shadow-lg shadow-blue-700/20 transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {salvandoAgenda ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Agendar e salvar na agenda
+              </button>
+            </div>
           </div>
         </section>
 
