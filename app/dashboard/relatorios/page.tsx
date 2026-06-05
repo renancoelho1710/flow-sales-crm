@@ -1,10 +1,21 @@
-import { ModulePlaceholder } from "@/components/dashboard/ModulePlaceholder";
+import { RelatoriosClient } from "./RelatoriosClient";
 
-export default function Page() {
-  return (
-    <ModulePlaceholder
-      title="Relatórios"
-      description="Relatórios preparados para indicadores, exportações, gráficos e acompanhamento por equipe."
-    />
-  );
+type PageProps = {
+  searchParams?: Promise<{
+    aba?: string;
+  }>;
+};
+
+export default async function Page({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const abaParam = String(params?.aba || "geral").toLowerCase();
+
+  const aba =
+    abaParam === "equipe"
+      ? "equipe"
+      : abaParam === "colaboradores" || abaParam === "unidades" || abaParam === "usuarios"
+        ? "colaboradores"
+        : "geral";
+
+  return <RelatoriosClient abaInicial={aba} />;
 }

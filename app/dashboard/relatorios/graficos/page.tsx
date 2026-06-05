@@ -1,10 +1,5 @@
-import { ModulePlaceholder } from "@/components/dashboard/ModulePlaceholder";
+import { RelatoriosClient } from "../RelatoriosClient";
 
 export default function Page() {
-  return (
-    <ModulePlaceholder
-      title="Gráficos"
-      description="Área preparada para gráficos detalhados por loja, período, vendedor e etapa."
-    />
-  );
+  return <RelatoriosClient abaInicial="geral" modoGraficos />;
 }

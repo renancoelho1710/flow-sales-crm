@@ -177,7 +177,7 @@ const menuItems: MenuItem[] = [
     subitems: [
       { label: "Geral", tab: "relatorios", href: "/dashboard/relatorios" },
       { label: "Equipe", tab: "relatorios-equipe", href: "/dashboard/relatorios?aba=equipe" },
-      { label: "Unidades", tab: "relatorios-unidades", href: "/dashboard/relatorios?aba=unidades" },
+      { label: "Colaboradores", tab: "relatorios-colaboradores", href: "/dashboard/relatorios?aba=colaboradores" },
     ],
   },
   {
@@ -225,6 +225,26 @@ function hrefAtivo(pathname: string, href: string) {
   const base = href.split("?")[0];
   if (base === "/dashboard") return pathname === "/dashboard";
   return pathname === base || pathname.startsWith(`${base}/`);
+}
+
+
+function hrefSubitemAtivo(pathname: string, search: string, href: string) {
+  const [base, query = ""] = href.split("?");
+
+  if (pathname !== base) return false;
+
+  if (!query) {
+    return !search;
+  }
+
+  const esperado = new URLSearchParams(query);
+  const atual = new URLSearchParams(search);
+
+  for (const [chave, valor] of esperado.entries()) {
+    if (atual.get(chave) !== valor) return false;
+  }
+
+  return true;
 }
 
 function buscarValor(configs: ConfigItem[] | undefined, chave: string, fallback: Record<string, any>) {
@@ -297,6 +317,7 @@ export function DashboardShell({ usuario, activeTab, children }: DashboardShellP
   const [menuAberto, setMenuAberto] = useState(true);
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const [buscaGlobal, setBuscaGlobal] = useState("");
+  const [search, setSearch] = useState("");
   const [dropdownAberto, setDropdownAberto] = useState<"notificacoes" | "avatar" | "usuarios" | null>(null);
   const [totalNotificacoes, setTotalNotificacoes] = useState(0);
   const [statusOperacional, setStatusOperacional] = useState(usuario.status_operacional || "offline");
@@ -389,6 +410,12 @@ export function DashboardShell({ usuario, activeTab, children }: DashboardShellP
       aplicarTemaNoDocumento({ tema: "claro", densidade: "confortavel", corPrincipal: "blue", fonte: "padrao" });
     }
   }
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setSearch(window.location.search.replace(/^\?/, ""));
+    }
+  }, [pathname]);
 
   useEffect(() => {
     carregarConfiguracoesVisuais();
@@ -509,7 +536,7 @@ const itemAtivo = isDashboardPrincipal
 
 const isActive =
   item.subitems.some((sub) => hrefAtivo(pathname, sub.href)) ||
-  Boolean(activeTab && activeTab === item.tab) ||
+  activeTab === item.tab ||
   itemAtivo;
                 const isOpen = openMenus.includes(item.label);
 
@@ -534,8 +561,8 @@ const isActive =
                       <div className="ml-6 mt-1 space-y-1 border-l border-slate-200 pl-3">
                         {item.subitems.map((subitem) => {
                           const childAtivo =
-  hrefAtivo(pathname, subitem.href) ||
-  Boolean(activeTab && activeTab === subitem.tab);
+                            hrefSubitemAtivo(pathname, search, subitem.href) ||
+                            Boolean(activeTab && activeTab === subitem.tab);
 
                           return (
                             <Link
