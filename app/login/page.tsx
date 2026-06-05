@@ -39,16 +39,10 @@ export default function LoginPage() {
 
     try {
       const emailLogin = email.trim().toLowerCase();
-const senhaLogin = senha.trim();
-
-console.log("Tentando login:", {
-  email: emailLogin,
-  senha_length: senhaLogin.length,
-});
-
-const { error } = await supabase.auth.signInWithPassword({
-  email: emailLogin,
-  password: senhaLogin,
+      const senhaLogin = senha.trim();
+      const { error } = await supabase.auth.signInWithPassword({
+            email: emailLogin,
+            password: senhaLogin,
 });
 
       if (error) {
