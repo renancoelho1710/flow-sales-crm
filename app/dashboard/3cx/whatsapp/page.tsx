@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { FlowShell } from "@/components/dashboard/FlowShell";
 import { WhatsAppMonitorClient } from "./WhatsAppMonitorClient";
 
 export default async function WhatsAppMonitorPage() {
@@ -25,9 +24,5 @@ export default async function WhatsAppMonitorPage() {
     redirect("/login");
   }
 
-  return (
-    <FlowShell usuario={usuarioInterno}>
-      <WhatsAppMonitorClient usuario={usuarioInterno} />
-    </FlowShell>
-  );
+  return <WhatsAppMonitorClient usuario={usuarioInterno} />;
 }
