@@ -11,8 +11,16 @@ type UsuarioInterno = {
   ativo: boolean;
 };
 
+function normalizar(valor?: string | null) {
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
 function podeVerEquipe(usuario: UsuarioInterno) {
-  return ["adm", "suporte", "gerente", "supervisor"].includes(usuario.perfil);
+  return ["adm", "suporte", "gerente", "supervisor"].includes(normalizar(usuario.perfil));
 }
 
 export async function GET(request: NextRequest) {
@@ -23,13 +31,7 @@ export async function GET(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json(
-      {
-        ok: false,
-        erro: "Usuário não autenticado.",
-      },
-      { status: 401 }
-    );
+    return NextResponse.json({ ok: false, erro: "Usuário não autenticado." }, { status: 401 });
   }
 
   const { data: usuarioLogado, error: usuarioError } = await supabase
@@ -41,35 +43,19 @@ export async function GET(request: NextRequest) {
 
   if (usuarioError) {
     return NextResponse.json(
-      {
-        ok: false,
-        erro: "Erro ao validar usuário logado.",
-        detalhe: usuarioError.message,
-      },
+      { ok: false, erro: "Erro ao validar usuário logado.", detalhe: usuarioError.message },
       { status: 500 }
     );
   }
 
   if (!usuarioLogado) {
-    return NextResponse.json(
-      {
-        ok: false,
-        erro: "Usuário interno não encontrado ou inativo.",
-      },
-      { status: 403 }
-    );
+    return NextResponse.json({ ok: false, erro: "Usuário interno não encontrado ou inativo." }, { status: 403 });
   }
 
   const conversaId = request.nextUrl.searchParams.get("conversa_id");
 
   if (!conversaId) {
-    return NextResponse.json(
-      {
-        ok: false,
-        erro: "conversa_id é obrigatório.",
-      },
-      { status: 400 }
-    );
+    return NextResponse.json({ ok: false, erro: "conversa_id é obrigatório." }, { status: 400 });
   }
 
   const usuario = usuarioLogado as UsuarioInterno;
@@ -104,7 +90,7 @@ export async function GET(request: NextRequest) {
       revisado_em,
       criado_em,
       atualizado_em
-    `
+      `
     )
     .eq("id", conversaId);
 
@@ -116,23 +102,13 @@ export async function GET(request: NextRequest) {
 
   if (conversaError) {
     return NextResponse.json(
-      {
-        ok: false,
-        erro: "Erro ao buscar conversa.",
-        detalhe: conversaError.message,
-      },
+      { ok: false, erro: "Erro ao buscar conversa.", detalhe: conversaError.message },
       { status: 500 }
     );
   }
 
   if (!conversa) {
-    return NextResponse.json(
-      {
-        ok: false,
-        erro: "Conversa não encontrada ou sem permissão.",
-      },
-      { status: 404 }
-    );
+    return NextResponse.json({ ok: false, erro: "Conversa não encontrada ou sem permissão." }, { status: 404 });
   }
 
   const { data: mensagens, error: mensagensError } = await supabase
@@ -151,18 +127,14 @@ export async function GET(request: NextRequest) {
       mensagem_preview,
       enviada_em,
       criado_em
-    `
+      `
     )
     .eq("conversa_id", conversa.id)
     .order("enviada_em", { ascending: true, nullsFirst: true });
 
   if (mensagensError) {
     return NextResponse.json(
-      {
-        ok: false,
-        erro: "Erro ao buscar mensagens.",
-        detalhe: mensagensError.message,
-      },
+      { ok: false, erro: "Erro ao buscar mensagens.", detalhe: mensagensError.message },
       { status: 500 }
     );
   }
@@ -173,6 +145,17 @@ export async function GET(request: NextRequest) {
     .eq("id", conversa.usuario_id)
     .maybeSingle();
 
+  let lead = null;
+  if (conversa.lead_id) {
+    const { data: leadData } = await supabase
+      .from("leads")
+      .select("id, nome, telefone, telefone_normalizado, etapa, veiculo_interesse, responsavel_id, atendente_resgate_id")
+      .eq("id", conversa.lead_id)
+      .maybeSingle();
+
+    lead = leadData;
+  }
+
   return NextResponse.json({
     ok: true,
     conversa: {
@@ -180,6 +163,7 @@ export async function GET(request: NextRequest) {
       usuario_nome: atendente?.nome || "Sem usuário",
       usuario_email: atendente?.email || null,
       usuario_perfil: atendente?.perfil || null,
+      lead,
     },
     mensagens: mensagens || [],
   });
