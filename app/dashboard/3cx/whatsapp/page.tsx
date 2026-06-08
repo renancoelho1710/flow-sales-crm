@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { WhatsAppMonitorClient } from "./WhatsAppMonitorClient";
+import { MeusWhatsAppsClient } from "./MeusWhatsAppsClient";
 
-export default async function WhatsAppMonitorPage() {
+export default async function MeusWhatsAppsPage() {
   const supabase = await createClient();
 
   const {
@@ -15,7 +15,7 @@ export default async function WhatsAppMonitorPage() {
 
   const { data: usuarioInterno } = await supabase
     .from("usuarios_internos")
-    .select("id, nome, email, perfil, ativo, status_operacional, status_administrativo")
+    .select("id, nome, email, perfil, ativo")
     .eq("auth_user_id", user.id)
     .eq("ativo", true)
     .maybeSingle();
@@ -24,5 +24,5 @@ export default async function WhatsAppMonitorPage() {
     redirect("/login");
   }
 
-  return <WhatsAppMonitorClient usuario={usuarioInterno} />;
+  return <MeusWhatsAppsClient usuario={usuarioInterno} />;
 }

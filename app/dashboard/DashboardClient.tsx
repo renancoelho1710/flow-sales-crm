@@ -14,6 +14,7 @@ import {
   Gauge,
   Gift,
   Loader2,
+  MessageCircle,
   PartyPopper,
   PhoneCall,
   ShieldCheck,
@@ -93,6 +94,36 @@ type DashboardData = {
   } | null;
   erro?: string;
 };
+;
+
+type WhatsAppPendencia = {
+  id: string;
+  lead_id: string | null;
+  telefone_normalizado: string | null;
+  nome_contato: string | null;
+  ultima_mensagem_preview: string | null;
+  ultima_direcao: string | null;
+  atualizado_em: string | null;
+  ultima_mensagem_em: string | null;
+  minutos_aguardando: number;
+  status_operacional_whatsapp: string;
+  lead_nome?: string | null;
+  lead_veiculo?: string | null;
+  mensagem_limpa?: boolean;
+};
+
+type WhatsAppPendenciasData = {
+  ok: boolean;
+  resumo: {
+    aguardando_resposta: number;
+    aguardando_cliente: number;
+    sem_lead: number;
+    maior_espera_minutos: number;
+  };
+  conversas: WhatsAppPendencia[];
+  erro?: string;
+};
+
 
 function formatarDinheiro(valor?: number) {
   return new Intl.NumberFormat("pt-BR", {
@@ -109,6 +140,15 @@ function formatarDataHora(valor?: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(valor));
+}
+
+function formatarEspera(minutos?: number) {
+  const total = Number(minutos || 0);
+  if (total < 1) return "agora";
+  if (total < 60) return `${total} min`;
+  const horas = Math.floor(total / 60);
+  const resto = total % 60;
+  return resto ? `${horas}h ${resto}min` : `${horas}h`;
 }
 
 function statusTexto(valor?: string | null) {
@@ -415,6 +455,100 @@ function PainelEquipe({ data }: { data: DashboardData }) {
   );
 }
 
+
+function WhatsAppPendentesOperadorCard() {
+  const [data, setData] = useState<WhatsAppPendenciasData | null>(null);
+  const [carregando, setCarregando] = useState(true);
+
+  useEffect(() => {
+    let ativo = true;
+
+    async function carregarWhatsApp() {
+      try {
+        const resposta = await fetch("/api/whatsapp/minhas-pendencias?limite=3", { cache: "no-store" });
+        const json = (await resposta.json()) as WhatsAppPendenciasData;
+        if (ativo && resposta.ok && json.ok) setData(json);
+      } catch {
+        if (ativo) setData(null);
+      } finally {
+        if (ativo) setCarregando(false);
+      }
+    }
+
+    carregarWhatsApp();
+    const timer = window.setInterval(carregarWhatsApp, 60000);
+
+    return () => {
+      ativo = false;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  const aguardando = data?.resumo?.aguardando_resposta || 0;
+  const maiorEspera = data?.resumo?.maior_espera_minutos || 0;
+  const conversas = data?.conversas || [];
+  const urgente = aguardando > 0;
+
+  return (
+    <PremiumCard className={`overflow-hidden p-5 ${urgente ? "border-orange-200 bg-gradient-to-br from-orange-50 via-white to-blue-50" : "bg-white"}`}>
+      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
+        <div className="min-w-0">
+          <div className="flex items-center gap-3">
+            <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${urgente ? "bg-orange-100 text-orange-700" : "bg-blue-50 text-blue-700"}`}>
+              <MessageCircle className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">WhatsApp pendente</p>
+              <h2 className="mt-1 text-xl font-black text-slate-950">
+                {carregando ? "Verificando conversas..." : urgente ? `${aguardando} cliente(s) aguardando resposta` : "Nenhum cliente aguardando agora"}
+              </h2>
+            </div>
+          </div>
+
+          <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-slate-600">
+            {urgente
+              ? `Maior espera: ${formatarEspera(maiorEspera)}. Priorize responder estes clientes no WhatsApp corporativo.`
+              : "Quando algum cliente responder no WhatsApp corporativo, ele aparece aqui automaticamente."}
+          </p>
+        </div>
+
+        <Link href="/dashboard/whatsapp" className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-black text-white shadow-lg shadow-slate-900/15">
+          Ver meus WhatsApps <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
+
+      {conversas.length ? (
+        <div className="mt-5 grid gap-3 lg:grid-cols-3">
+          {conversas.map((item) => (
+            <Link
+              key={item.id}
+              href={item.lead_id ? `/dashboard/leads/${item.lead_id}` : `/dashboard/whatsapp?conversa=${item.id}`}
+              className="rounded-3xl border border-orange-100 bg-white p-4 shadow-sm transition hover:border-orange-200 hover:shadow-md"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="line-clamp-1 text-sm font-black text-slate-950">
+                    {item.lead_nome || item.nome_contato || item.telefone_normalizado || "Contato WhatsApp"}
+                  </p>
+                  <p className="mt-1 line-clamp-2 text-xs font-bold leading-5 text-slate-500">
+                    {item.ultima_mensagem_preview || "Mensagem recebida no WhatsApp"}
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full bg-orange-50 px-2.5 py-1 text-[10px] font-black text-orange-700">
+                  {formatarEspera(item.minutos_aguardando)}
+                </span>
+              </div>
+              <p className="mt-3 text-[11px] font-black uppercase tracking-wide text-blue-700">
+                {item.lead_id ? "Abrir lead" : "Sem lead vinculado"}
+              </p>
+            </Link>
+          ))}
+        </div>
+      ) : null}
+    </PremiumCard>
+  );
+}
+
 function DashboardOperador({ data }: { data: DashboardData }) {
   const resumo = data.resumo;
 
@@ -433,6 +567,8 @@ function DashboardOperador({ data }: { data: DashboardData }) {
             Minhas oportunidades <ArrowRight className="h-4 w-4" />
           </Link>
         </section>
+
+        <WhatsAppPendentesOperadorCard />
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <KpiCard titulo="Hoje" valor={resumo?.agendamentos_hoje || 0} detalhe="Agendamentos do dia" icon={CalendarCheck2} tom="blue" href="/dashboard/agenda" />
@@ -627,6 +763,8 @@ function DashboardOperacionalGestao({ data }: { data: DashboardData }) {
           </div>
         </section>
 
+        <WhatsAppPendentesOperadorCard />
+
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <KpiCard titulo="Hoje" valor={resumo?.agendamentos_hoje || 0} detalhe="Agendamentos do dia" icon={CalendarCheck2} tom="blue" href="/dashboard/agenda" />
           <KpiCard titulo="Atrasadas" valor={resumo?.proximas_acoes_atrasadas || 0} detalhe="Resolver primeiro" icon={AlertTriangle} tom="red" href="/dashboard/leads/tarefas" />
@@ -729,6 +867,8 @@ function DashboardOperacionalOperador({ data }: { data: DashboardData }) {
           </div>
           <Link href="/dashboard/leads/tarefas" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-sm font-black text-white">Abrir minhas tarefas</Link>
         </section>
+        <WhatsAppPendentesOperadorCard />
+
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <KpiCard titulo="Hoje" valor={resumo?.agendamentos_hoje || 0} detalhe="Agenda do dia" icon={CalendarCheck2} tom="blue" href="/dashboard/agenda" />
           <KpiCard titulo="Atrasadas" valor={resumo?.proximas_acoes_atrasadas || 0} detalhe="Retornar primeiro" icon={AlertTriangle} tom="red" href="/dashboard/leads/tarefas" />
