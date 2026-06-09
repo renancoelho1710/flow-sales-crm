@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { registrarHistoricoC2S } from "@/lib/c2s/sincronizacao";
 
 type Payload = {
   lead_id?: string;
@@ -175,10 +176,35 @@ export async function POST(request: Request) {
       );
     }
 
+    const c2sSync = await registrarHistoricoC2S({
+      supabase,
+      leadId,
+      usuarioId: usuarioInterno.id,
+      tipoEvento: "interacao_registrada",
+      titulo: "Interação registrada no Flow Sales CRM",
+      descricao: [
+        "[Flow Sales CRM] Interação registrada no atendimento do lead.",
+        `Operador: ${usuarioInterno.nome}.`,
+        `Canal: ${canal}.`,
+        resultado ? `Resultado: ${resultado}.` : "",
+        etapa ? `Etapa atual: ${etapa}.` : "",
+        `Observação: ${observacao}`,
+      ].filter(Boolean).join("\n"),
+      payload: {
+        interacao_id: interacao.id,
+        tipo,
+        canal,
+        resultado: resultado || null,
+        etapa,
+        data_proxima_acao: proximaAcao,
+      },
+    });
+
     return NextResponse.json({
       ok: true,
       interacao,
       lead,
+      c2s_sync: c2sSync,
     });
   } catch (error) {
     console.error("Erro ao registrar atendimento:", error);

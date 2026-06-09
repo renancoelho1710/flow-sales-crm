@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { registrarHistoricoC2S } from "@/lib/c2s/sincronizacao";
 
 type PeriodoAgenda = "manha" | "tarde" | "noite";
 
@@ -314,11 +315,39 @@ export async function POST(request: Request) {
       .select("*")
       .single();
 
+    const c2sSync = await registrarHistoricoC2S({
+      supabase,
+      leadId,
+      usuarioId: usuario.id,
+      tipoEvento: "agendamento_criado",
+      titulo: "Agendamento confirmado pelo Flow Sales CRM",
+      descricao: [
+        "[Flow Sales CRM] Agendamento confirmado no atendimento do lead.",
+        `Operador: ${usuario.nome}.`,
+        `Vendedor C2S/comercial: ${vendedor.nome}.`,
+        vendedor.loja ? `Loja da visita: ${vendedor.loja}.` : "",
+        `Data/período: ${data} - ${periodo}.`,
+        `Horário previsto: ${horario}.`,
+        lead.veiculo_interesse ? `Veículo de interesse: ${lead.veiculo_interesse}.` : "",
+        observacao ? `Observação: ${observacao}` : "",
+      ].filter(Boolean).join("\n"),
+      payload: {
+        agendamento_id: agendamento.id,
+        data,
+        periodo,
+        horario,
+        vendedor_id: vendedorId,
+        vendedor_nome: vendedor.nome,
+        loja_visita: vendedor.loja || null,
+      },
+    });
+
     return NextResponse.json({
       ok: true,
       agendamento,
       interacao,
       lead: leadAtualizado || lead,
+      c2s_sync: c2sSync,
     });
   } catch (error) {
     console.error("Erro inesperado ao agendar lead:", error);

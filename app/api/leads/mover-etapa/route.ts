@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { registrarHistoricoC2S } from "@/lib/c2s/sincronizacao";
 
 type Payload = {
   lead_id?: string;
@@ -368,9 +369,39 @@ export async function PATCH(request: Request) {
       }
     }
 
+    const c2sSync = await registrarHistoricoC2S({
+      supabase,
+      leadId,
+      usuarioId: usuarioInterno.id,
+      tipoEvento: etapaDestino === "venda_validada"
+        ? "venda_confirmada"
+        : etapaDestino === "venda_pendente"
+          ? "venda_pendente"
+          : etapaDestino === "perdido"
+            ? "lead_perdido"
+            : "mudanca_etapa",
+      titulo: "Atualização de etapa no Flow Sales CRM",
+      descricao: [
+        "[Flow Sales CRM] Lead atualizado no funil de atendimento.",
+        `Operador: ${usuarioInterno.nome}.`,
+        `Etapa anterior: ${leadAtual.etapa || "não informada"}.`,
+        `Nova etapa: ${etapaDestino}.`,
+        observacaoFinal ? `Observação: ${observacaoFinal}` : "",
+        proximaAcao ? `Próxima ação: ${new Date(proximaAcao).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}.` : "",
+      ].filter(Boolean).join("\n"),
+      payload: {
+        etapa_anterior: leadAtual.etapa || null,
+        etapa_destino: etapaDestino,
+        resultado: resultadoPorEtapa(etapaDestino),
+        observacao: observacaoFinal,
+        data_proxima_acao: proximaAcao,
+      },
+    });
+
     return NextResponse.json({
       ok: true,
       lead,
+      c2s_sync: c2sSync,
     });
   } catch (error) {
     console.error("Erro inesperado ao mover lead:", error);

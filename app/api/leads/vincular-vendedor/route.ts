@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { registrarHistoricoC2S } from "@/lib/c2s/sincronizacao";
 
 type Payload = {
   lead_id?: string;
@@ -174,6 +175,30 @@ export async function PATCH(request: Request) {
       console.error("Erro ao atualizar vendedor nos agendamentos:", erroAgendamentos);
     }
 
+    const c2sSync = await registrarHistoricoC2S({
+      supabase,
+      leadId,
+      usuarioId: usuarioInterno.id,
+      tipoEvento: vendedorMudou ? "vendedor_alterado" : "vendedor_vinculado",
+      titulo: vendedorMudou ? "Vendedor alterado no Flow Sales CRM" : "Vendedor vinculado no Flow Sales CRM",
+      descricao: [
+        vendedorMudou
+          ? "[Flow Sales CRM] Vendedor do lead alterado pela supervisão/ADM."
+          : "[Flow Sales CRM] Vendedor vinculado ao lead pela supervisão/ADM.",
+        `Responsável pela alteração: ${usuarioInterno.nome}.`,
+        vendedorMudou ? `Vendedor anterior: ${leadAtual.vendedor_nome || "não informado"}.` : "",
+        `Vendedor atual: ${vendedor.nome}.`,
+        motivo ? `Motivo: ${motivo}` : "",
+      ].filter(Boolean).join("\n"),
+      payload: {
+        vendedor_anterior_id: leadAtual.vendedor_id || null,
+        vendedor_anterior_nome: leadAtual.vendedor_nome || null,
+        vendedor_novo_id: vendedor.id,
+        vendedor_novo_nome: vendedor.nome,
+        motivo: motivo || null,
+      },
+    });
+
     return NextResponse.json({
       ok: true,
       lead: leadAtualizado,
@@ -181,6 +206,7 @@ export async function PATCH(request: Request) {
       aviso_agendamentos: erroAgendamentos
         ? "Vendedor salvo no lead, mas não foi possível atualizar todos os agendamentos."
         : null,
+      c2s_sync: c2sSync,
     });
   } catch (error) {
     console.error("Erro inesperado ao vincular vendedor:", error);
