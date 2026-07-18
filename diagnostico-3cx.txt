@@ -1,0 +1,1598 @@
+===== ARVORE APP DASHBOARD 3CX =====
+
+FullName
+--------
+C:\Users\AZUL\OneDrive\Área de Trabalho\flow-sales-crm\app\dashboard\3cx\page.tsx
+C:\Users\AZUL\OneDrive\Área de Trabalho\flow-sales-crm\app\dashboard\3cx\classificacoes\page.tsx
+C:\Users\AZUL\OneDrive\Área de Trabalho\flow-sales-crm\app\dashboard\3cx\historico\page.tsx
+C:\Users\AZUL\OneDrive\Área de Trabalho\flow-sales-crm\app\dashboard\3cx\whatsapp\GerarConectorWhatsApp.tsx
+C:\Users\AZUL\OneDrive\Área de Trabalho\flow-sales-crm\app\dashboard\3cx\whatsapp\MeusWhatsAppsClient.tsx
+C:\Users\AZUL\OneDrive\Área de Trabalho\flow-sales-crm\app\dashboard\3cx\whatsapp\page.tsx
+C:\Users\AZUL\OneDrive\Área de Trabalho\flow-sales-crm\app\dashboard\3cx\whatsapp\WhatsAppMonitorClient.tsx
+
+
+
+===== ARVORE APP API 3CX =====
+
+FullName
+--------
+C:\Users\AZUL\OneDrive\Área de Trabalho\flow-sales-crm\app\api\3cx\status\route.ts
+
+
+
+===== POSSIVEIS COMPONENTES 3CX / TELEFONIA =====
+
+
+===== CONTEUDO APP DASHBOARD 3CX =====
+
+
+===== FILE: C:\Users\AZUL\OneDrive\Área de Trabalho\flow-sales-crm\app\dashboard\3cx\classificacoes\page.tsx =====
+import { ModulePlaceholder } from "@/components/dashboard/ModulePlaceholder";
+
+export default function Page() {
+  return (
+    <ModulePlaceholder
+      title="Classificações 3CX"
+      description="Tela preparada para classificar ligações e resultados de contato."
+    />
+  );
+}
+
+
+===== FILE: C:\Users\AZUL\OneDrive\Área de Trabalho\flow-sales-crm\app\dashboard\3cx\historico\page.tsx =====
+import { ModulePlaceholder } from "@/components/dashboard/ModulePlaceholder";
+
+export default function Page() {
+  return (
+    <ModulePlaceholder
+      title="Histórico de ligações"
+      description="Histórico preparado para consultar chamadas por lead, usuário, período e resultado."
+    />
+  );
+}
+
+
+===== FILE: C:\Users\AZUL\OneDrive\Área de Trabalho\flow-sales-crm\app\dashboard\3cx\whatsapp\GerarConectorWhatsApp.tsx =====
+"use client";
+
+import { useEffect, useState } from "react";
+import { Copy, KeyRound, Loader2, Plus, ShieldCheck, X } from "lucide-react";
+
+type Usuario = {
+  id: string;
+  nome: string;
+  email: string;
+  perfil: string;
+  ativo: boolean;
+};
+
+type Props = {
+  perfilUsuarioLogado: string;
+};
+
+type TokenGerado = {
+  token: string;
+  usuario_nome: string;
+  nome_dispositivo: string;
+  aviso: string;
+};
+
+function podeGerarToken(perfil: string) {
+  return ["adm", "suporte"].includes(perfil);
+}
+
+export function GerarConectorWhatsApp({ perfilUsuarioLogado }: Props) {
+  const [aberto, setAberto] = useState(false);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [usuarioId, setUsuarioId] = useState("");
+  const [nomeDispositivo, setNomeDispositivo] = useState("");
+  const [observacao, setObservacao] = useState("");
+  const [carregandoUsuarios, setCarregandoUsuarios] = useState(false);
+  const [gerando, setGerando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [tokenGerado, setTokenGerado] = useState<TokenGerado | null>(null);
+  const [copiado, setCopiado] = useState(false);
+
+  const permitido = podeGerarToken(perfilUsuarioLogado);
+
+  async function carregarUsuarios() {
+    if (!permitido) return;
+
+    setCarregandoUsuarios(true);
+    setErro(null);
+
+    try {
+      const resposta = await fetch("/api/whatsapp/conector/tokens", {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      const json = await resposta.json();
+
+      if (!resposta.ok || !json.ok) {
+        setErro(json.erro || "Erro ao carregar usuários.");
+        setCarregandoUsuarios(false);
+        return;
+      }
+
+      setUsuarios(json.usuarios || []);
+
+      if (!usuarioId && json.usuarios?.[0]?.id) {
+        setUsuarioId(json.usuarios[0].id);
+      }
+    } catch {
+      setErro("Erro ao carregar usuários.");
+    }
+
+    setCarregandoUsuarios(false);
+  }
+
+  async function gerarToken() {
+    if (!usuarioId) {
+      setErro("Selecione um funcionário.");
+      return;
+    }
+
+    setGerando(true);
+    setErro(null);
+    setTokenGerado(null);
+    setCopiado(false);
+
+    try {
+      const resposta = await fetch("/api/whatsapp/conector/tokens", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          usuario_id: usuarioId,
+          nome_dispositivo: nomeDispositivo,
+          observacao,
+        }),
+      });
+
+      const json = await resposta.json();
+
+      if (!resposta.ok || !json.ok) {
+        setErro(json.erro || "Erro ao gerar token.");
+        setGerando(false);
+        return;
+      }
+
+      setTokenGerado({
+        token: json.token,
+        usuario_nome: json.usuario_nome,
+        nome_dispositivo: json.nome_dispositivo,
+        aviso: json.aviso,
+      });
+    } catch {
+      setErro("Erro ao gerar token.");
+    }
+
+    setGerando(false);
+  }
+
+  async function copiarToken() {
+    if (!tokenGerado?.token) return;
+
+    await navigator.clipboard.writeText(tokenGerado.token);
+    setCopiado(true);
+
+    setTimeout(() => setCopiado(false), 1800);
+  }
+
+  useEffect(() => {
+    if (aberto) {
+      carregarUsuarios();
+    }
+  }, [aberto]);
+
+  if (!permitido) {
+    return null;
+  }
+
+  return (
+    <section className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
+        <div>
+          <h2 className="flex items-center gap-2 text-base font-bold text-slate-950">
+            <KeyRound className="h-5 w-5 text-blue-700" />
+            Conector WhatsApp
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Gere o token individual para instalar o conector no PC do atendente.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setAberto((atual) => !atual)}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 text-sm font-bold text-white shadow-lg shadow-blue-700/20 transition hover:bg-blue-800"
+        >
+          {aberto ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+          {aberto ? "Fechar" : "Gerar conector"}
+        </button>
+      </div>
+
+      {aberto ? (
+        <div className="mt-4 grid gap-3 border-t border-slate-100 pt-4 xl:grid-cols-[1.2fr_1fr_1.2fr_auto]">
+          <label className="grid gap-1">
+            <span className="text-xs font-bold uppercase tracking-wide text-slate-500">
+              Funcionário
+            </span>
+            <select
+              value={usuarioId}
+              onChange={(event) => setUsuarioId(event.target.value)}
+              className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+            >
+              {carregandoUsuarios ? (
+                <option>Carregando...</option>
+              ) : null}
+
+              {!carregandoUsuarios && usuarios.length === 0 ? (
+                <option value="">Nenhum usuário encontrado</option>
+              ) : null}
+
+              {usuarios.map((usuario) => (
+                <option key={usuario.id} value={usuario.id}>
+                  {usuario.nome} — {usuario.perfil}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="grid gap-1">
+            <span className="text-xs font-bold uppercase tracking-wide text-slate-500">
+              Nome do dispositivo
+            </span>
+            <input
+              value={nomeDispositivo}
+              onChange={(event) => setNomeDispositivo(event.target.value)}
+              placeholder="Ex: PC João Loja 02"
+              className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+            />
+          </label>
+
+          <label className="grid gap-1">
+            <span className="text-xs font-bold uppercase tracking-wide text-slate-500">
+              Observação
+            </span>
+            <input
+              value={observacao}
+              onChange={(event) => setObservacao(event.target.value)}
+              placeholder="Ex: WhatsApp comercial loja 02"
+              className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+            />
+          </label>
+
+          <button
+            type="button"
+            onClick={gerarToken}
+            disabled={gerando || carregandoUsuarios}
+            className="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 xl:mt-auto"
+          >
+            {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+            Gerar token
+          </button>
+        </div>
+      ) : null}
+
+      {erro ? (
+        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700">
+          {erro}
+        </div>
+      ) : null}
+
+      {tokenGerado ? (
+        <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+          <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
+            <div>
+              <p className="text-sm font-bold text-emerald-800">
+                Token gerado para {tokenGerado.usuario_nome}
+              </p>
+              <p className="mt-1 text-xs font-semibold text-emerald-700">
+                {tokenGerado.nome_dispositivo}
+              </p>
+              <p className="mt-2 text-xs font-semibold text-emerald-700">
+                {tokenGerado.aviso}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={copiarToken}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 text-sm font-bold text-white transition hover:bg-emerald-800"
+            >
+              <Copy className="h-4 w-4" />
+              {copiado ? "Copiado" : "Copiar token"}
+            </button>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-emerald-200 bg-white p-3 font-mono text-sm font-bold text-slate-900">
+            {tokenGerado.token}
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+
+===== FILE: C:\Users\AZUL\OneDrive\Área de Trabalho\flow-sales-crm\app\dashboard\3cx\whatsapp\MeusWhatsAppsClient.tsx =====
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  Clock3,
+  Loader2,
+  MessageCircle,
+  RefreshCw,
+  Search,
+} from "lucide-react";
+
+type Usuario = {
+  id: string;
+  nome: string;
+  email?: string | null;
+  perfil?: string | null;
+};
+
+type WhatsAppConversa = {
+  id: string;
+  lead_id: string | null;
+  telefone_normalizado: string | null;
+  nome_contato: string | null;
+  ultima_mensagem_preview: string | null;
+  ultima_direcao: string | null;
+  ultima_mensagem_em: string | null;
+  atualizado_em: string | null;
+  status_operacional_whatsapp: string;
+  minutos_aguardando: number;
+  lead_nome?: string | null;
+  lead_veiculo?: string | null;
+  lead_etapa?: string | null;
+};
+
+type ApiData = {
+  ok: boolean;
+  gerado_em: string;
+  resumo: {
+    total_conversas: number;
+    aguardando_resposta: number;
+    aguardando_cliente: number;
+    sem_lead: number;
+    mensagens_tecnicas_ignoradas: number;
+    maior_espera_minutos: number;
+  };
+  conversas: WhatsAppConversa[];
+  erro?: string;
+};
+
+type StatusFiltro = "aguardando_resposta" | "aguardando_cliente" | "sem_lead" | "com_lead" | "todos";
+
+function formatarEspera(minutos?: number) {
+  const total = Number(minutos || 0);
+  if (total < 1) return "agora";
+  if (total < 60) return `${total} min`;
+  const horas = Math.floor(total / 60);
+  const resto = total % 60;
+  return resto ? `${horas}h ${resto}min` : `${horas}h`;
+}
+
+function formatarDataHora(valor?: string | null) {
+  if (!valor) return "Sem horário";
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(valor));
+}
+
+function statusTexto(status: string) {
+  if (status === "cliente_aguardando_resposta") return "Cliente aguardando resposta";
+  if (status === "aguardando_cliente") return "Aguardando cliente";
+  if (status === "sem_lead_vinculado") return "Sem lead vinculado";
+  if (status === "mensagem_tecnica_ignorada") return "Mensagem técnica ignorada";
+  return "Em monitoramento";
+}
+
+function telefoneFormatado(valor?: string | null) {
+  const numeros = String(valor || "").replace(/\D/g, "");
+  if (!numeros) return "Telefone não identificado";
+  if (numeros.length === 11) return `(${numeros.slice(0, 2)}) ${numeros.slice(2, 7)}-${numeros.slice(7)}`;
+  if (numeros.length === 10) return `(${numeros.slice(0, 2)}) ${numeros.slice(2, 6)}-${numeros.slice(6)}`;
+  return numeros;
+}
+
+function waLink(valor?: string | null) {
+  const numeros = String(valor || "").replace(/\D/g, "");
+  if (!numeros) return "#";
+  const comPais = numeros.startsWith("55") ? numeros : `55${numeros}`;
+  return `https://wa.me/${comPais}`;
+}
+
+export function MeusWhatsAppsClient({ usuario }: { usuario: Usuario }) {
+  const [data, setData] = useState<ApiData | null>(null);
+  const [status, setStatus] = useState<StatusFiltro>("aguardando_resposta");
+  const [busca, setBusca] = useState("");
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState("");
+
+  const query = useMemo(() => {
+    const params = new URLSearchParams();
+    params.set("status", status);
+    params.set("limite", "120");
+    if (busca.trim()) params.set("busca", busca.trim());
+    return params.toString();
+  }, [status, busca]);
+
+  async function carregar() {
+    setCarregando(true);
+    setErro("");
+
+    try {
+      const resposta = await fetch(`/api/whatsapp/minhas-pendencias?${query}`, { cache: "no-store" });
+      const json = (await resposta.json()) as ApiData;
+
+      if (!resposta.ok || !json.ok) {
+        throw new Error(json.erro || "Não foi possível carregar seus WhatsApps.");
+      }
+
+      setData(json);
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : "Erro ao carregar WhatsApp.");
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  useEffect(() => {
+    carregar();
+    const timer = window.setInterval(carregar, 60000);
+
+    return () => window.clearInterval(timer);
+  }, [query]);
+
+  const resumo = data?.resumo;
+  const conversas = data?.conversas || [];
+
+  return (
+    <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1760px] space-y-5">
+        <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.06)]">
+          <div className="grid gap-0 xl:grid-cols-[1fr_360px]">
+            <div className="p-6 lg:p-7">
+              <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-700">Meu WhatsApp</p>
+              <h1 className="mt-2 text-3xl font-black tracking-[-0.05em] text-slate-950">Clientes que precisam de resposta</h1>
+              <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-600">
+                Esta tela mostra somente as conversas do WhatsApp corporativo vinculadas ao seu atendimento. O objetivo é evitar cliente esquecido no WhatsApp.
+              </p>
+
+              <div className="mt-6 grid gap-3 md:grid-cols-4">
+                <div className="rounded-3xl bg-orange-50 p-4">
+                  <p className="text-[10px] font-black uppercase text-orange-700">Aguardando resposta</p>
+                  <p className="mt-2 text-3xl font-black">{resumo?.aguardando_resposta || 0}</p>
+                  <p className="mt-1 text-xs font-bold text-orange-700">Responder primeiro</p>
+                </div>
+                <div className="rounded-3xl bg-blue-50 p-4">
+                  <p className="text-[10px] font-black uppercase text-blue-700">Aguardando cliente</p>
+                  <p className="mt-2 text-3xl font-black">{resumo?.aguardando_cliente || 0}</p>
+                  <p className="mt-1 text-xs font-bold text-blue-700">Você já respondeu</p>
+                </div>
+                <div className="rounded-3xl bg-slate-100 p-4">
+                  <p className="text-[10px] font-black uppercase text-slate-600">Sem lead</p>
+                  <p className="mt-2 text-3xl font-black">{resumo?.sem_lead || 0}</p>
+                  <p className="mt-1 text-xs font-bold text-slate-500">Revisar se necessário</p>
+                </div>
+                <div className="rounded-3xl bg-red-50 p-4">
+                  <p className="text-[10px] font-black uppercase text-red-700">Maior espera</p>
+                  <p className="mt-2 text-3xl font-black">{formatarEspera(resumo?.maior_espera_minutos)}</p>
+                  <p className="mt-1 text-xs font-bold text-red-700">Prioridade operacional</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-6 text-white">
+              <div className="relative z-10">
+                <MessageCircle className="h-9 w-9 text-cyan-200" />
+                <p className="mt-5 text-xs font-black uppercase tracking-[0.24em] text-cyan-200">Operador</p>
+                <p className="mt-2 text-2xl font-black">{usuario.nome}</p>
+                <p className="mt-3 text-sm font-bold leading-6 text-blue-100">
+                  Regra: se a última mensagem foi recebida do cliente, ele aparece como aguardando resposta. Se você respondeu, fica aguardando cliente.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
+            <div className="flex flex-wrap gap-2">
+              {[
+                ["aguardando_resposta", "Aguardando resposta"],
+                ["aguardando_cliente", "Aguardando cliente"],
+                ["sem_lead", "Sem lead"],
+                ["com_lead", "Com lead"],
+                ["todos", "Todos"],
+              ].map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setStatus(key as StatusFiltro)}
+                  className={`rounded-full border px-4 py-2 text-sm font-black ${
+                    status === key ? "border-blue-200 bg-blue-700 text-white" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <label className="relative">
+                <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <input
+                  value={busca}
+                  onChange={(event) => setBusca(event.target.value)}
+                  placeholder="Buscar telefone, cliente ou mensagem..."
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm font-bold outline-none focus:border-blue-600 sm:w-[340px]"
+                />
+              </label>
+              <button
+                onClick={carregar}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50"
+              >
+                <RefreshCw className="h-4 w-4" /> Atualizar
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {erro ? (
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
+            <AlertTriangle className="mr-2 inline h-5 w-5" />
+            {erro}
+          </div>
+        ) : null}
+
+        {carregando ? (
+          <div className="grid min-h-[320px] place-items-center rounded-[28px] border border-slate-200 bg-white">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-700" />
+          </div>
+        ) : (
+          <section className="grid gap-4">
+            {conversas.length ? (
+              conversas.map((conversa) => {
+                const aguardandoResposta = conversa.status_operacional_whatsapp === "cliente_aguardando_resposta";
+                return (
+                  <article key={conversa.id} className={`rounded-[28px] border bg-white p-5 shadow-sm ${aguardandoResposta ? "border-orange-200" : "border-slate-200"}`}>
+                    <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-start">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={`rounded-full px-3 py-1 text-xs font-black ${aguardandoResposta ? "bg-orange-50 text-orange-700" : "bg-blue-50 text-blue-700"}`}>
+                            {statusTexto(conversa.status_operacional_whatsapp)}
+                          </span>
+                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">
+                            {telefoneFormatado(conversa.telefone_normalizado)}
+                          </span>
+                          {conversa.lead_id ? (
+                            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">Lead vinculado</span>
+                          ) : (
+                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">Sem lead vinculado</span>
+                          )}
+                        </div>
+
+                        <h2 className="mt-3 text-xl font-black tracking-[-0.03em] text-slate-950">
+                          {conversa.lead_nome || conversa.nome_contato || conversa.telefone_normalizado || "Contato WhatsApp"}
+                        </h2>
+
+                        <p className="mt-2 max-w-5xl text-sm font-semibold leading-6 text-slate-600">
+                          {conversa.ultima_mensagem_preview || "Mensagem recebida no WhatsApp corporativo."}
+                        </p>
+
+                        <div className="mt-4 flex flex-wrap gap-3 text-xs font-bold text-slate-500">
+                          <span className="inline-flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" /> Última atualização: {formatarDataHora(conversa.atualizado_em)}</span>
+                          {aguardandoResposta ? <span>Tempo aguardando: {formatarEspera(conversa.minutos_aguardando)}</span> : null}
+                          {conversa.lead_veiculo ? <span>Veículo: {conversa.lead_veiculo}</span> : null}
+                        </div>
+                      </div>
+
+                      <div className="flex shrink-0 flex-col gap-2 sm:flex-row xl:flex-col">
+                        {conversa.lead_id ? (
+                          <Link href={`/dashboard/leads/${conversa.lead_id}`} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-sm font-black text-white">
+                            Ver lead <ArrowRight className="h-4 w-4" />
+                          </Link>
+                        ) : null}
+                        <a href={waLink(conversa.telefone_normalizado)} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50">
+                          Abrir WhatsApp
+                        </a>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })
+            ) : (
+              <div className="rounded-[28px] border border-slate-200 bg-white p-8 text-center shadow-sm">
+                <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-600" />
+                <h2 className="mt-3 text-xl font-black text-slate-950">Nenhuma pendência nesse filtro</h2>
+                <p className="mt-2 text-sm font-semibold text-slate-500">
+                  Quando algum cliente responder no WhatsApp corporativo, a pendência aparecerá aqui automaticamente.
+                </p>
+              </div>
+            )}
+          </section>
+        )}
+      </div>
+    </main>
+  );
+}
+
+
+===== FILE: C:\Users\AZUL\OneDrive\Área de Trabalho\flow-sales-crm\app\dashboard\3cx\whatsapp\page.tsx =====
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { MeusWhatsAppsClient } from "./MeusWhatsAppsClient";
+
+export default async function MeusWhatsAppsPage() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const { data: usuarioInterno } = await supabase
+    .from("usuarios_internos")
+    .select("id, nome, email, perfil, ativo")
+    .eq("auth_user_id", user.id)
+    .eq("ativo", true)
+    .maybeSingle();
+
+  if (!usuarioInterno) {
+    redirect("/login");
+  }
+
+  return <MeusWhatsAppsClient usuario={usuarioInterno} />;
+}
+
+
+===== FILE: C:\Users\AZUL\OneDrive\Área de Trabalho\flow-sales-crm\app\dashboard\3cx\whatsapp\WhatsAppMonitorClient.tsx =====
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock3,
+  ExternalLink,
+  Filter,
+  Loader2,
+  MessageCircle,
+  Phone,
+  RefreshCw,
+  Search,
+  ShieldAlert,
+  Smartphone,
+  UserRound,
+  Wifi,
+  WifiOff,
+  X,
+} from "lucide-react";
+
+type Usuario = {
+  id: string;
+  nome: string;
+  email?: string | null;
+  perfil: string;
+};
+
+type Conversa = {
+  id: string;
+  conector_id: string | null;
+  usuario_id: string | null;
+  lead_id: string | null;
+  telefone_normalizado: string | null;
+  nome_contato: string | null;
+  ultima_mensagem_preview: string | null;
+  ultima_direcao: string | null;
+  cliente_respondeu: boolean | null;
+  conversa_fora_da_base: boolean | null;
+  status_auditoria: string | null;
+  atualizado_em: string | null;
+  primeira_mensagem_em?: string | null;
+  ultima_mensagem_em?: string | null;
+  revisado?: boolean | null;
+  usuario_nome?: string | null;
+  usuario_email?: string | null;
+  lead_nome?: string | null;
+  lead_telefone?: string | null;
+  lead_veiculo?: string | null;
+  lead_etapa?: string | null;
+  minutos_aguardando?: number;
+  status_operacional_whatsapp?: string;
+  mensagem_limpa?: boolean;
+};
+
+type Conector = {
+  id: string;
+  nome: string | null;
+  identificador: string | null;
+  status: string | null;
+  ultimo_heartbeat_em: string | null;
+  ultima_captura_em: string | null;
+  total_conversas_capturadas: number | null;
+  total_clientes_aguardando: number | null;
+  usuario_nome?: string | null;
+};
+
+type AuditoriaData = {
+  ok: boolean;
+  gerado_em: string;
+  permissao_gestao: boolean;
+  resumo: {
+    total_conversas: number;
+    aguardando_resposta: number;
+    aguardando_cliente: number;
+    fora_da_base: number;
+    com_lead: number;
+    mensagens_tecnicas_ignoradas: number;
+    conectores_online: number;
+    conectores_offline: number;
+    maior_espera_minutos: number;
+  };
+  conversas: Conversa[];
+  conectores: Conector[];
+  erro?: string;
+};
+
+type FiltroStatus = "todos" | "aguardando_resposta" | "aguardando_cliente" | "fora_da_base" | "com_lead";
+
+function dataHora(valor?: string | null) {
+  if (!valor) return "-";
+  try {
+    return new Intl.DateTimeFormat("pt-BR", {
+      dateStyle: "short",
+      timeStyle: "short",
+      timeZone: "America/Sao_Paulo",
+    }).format(new Date(valor));
+  } catch {
+    return "-";
+  }
+}
+
+function tempoMinutos(minutos?: number) {
+  const valor = Number(minutos || 0);
+  if (valor < 1) return "agora";
+  if (valor < 60) return `${valor} min`;
+  const h = Math.floor(valor / 60);
+  const m = valor % 60;
+  return m ? `${h}h ${m}min` : `${h}h`;
+}
+
+function telefoneFormatado(valor?: string | null) {
+  const n = String(valor || "").replace(/\D/g, "");
+  if (n.length === 11) return `(${n.slice(0, 2)}) ${n.slice(2, 7)}-${n.slice(7)}`;
+  if (n.length === 10) return `(${n.slice(0, 2)}) ${n.slice(2, 6)}-${n.slice(6)}`;
+  return valor || "-";
+}
+
+function statusLabel(conversa: Conversa) {
+  const status = conversa.status_operacional_whatsapp;
+  if (status === "cliente_aguardando_resposta") return "Cliente aguardando resposta";
+  if (status === "aguardando_cliente") return "Aguardando cliente";
+  if (status === "sem_lead_vinculado") return "Sem lead vinculado";
+  if (status === "mensagem_tecnica_ignorada") return "Ignorada";
+  return "Em monitoramento";
+}
+
+function statusClass(conversa: Conversa) {
+  const status = conversa.status_operacional_whatsapp;
+  if (status === "cliente_aguardando_resposta") return "border-red-200 bg-red-50 text-red-700";
+  if (status === "aguardando_cliente") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (status === "sem_lead_vinculado") return "border-orange-200 bg-orange-50 text-orange-700";
+  if (status === "mensagem_tecnica_ignorada") return "border-slate-200 bg-slate-50 text-slate-500";
+  return "border-blue-200 bg-blue-50 text-blue-700";
+}
+
+function CardResumo({ titulo, valor, detalhe, icon: Icon, tom }: { titulo: string; valor: string | number; detalhe: string; icon: any; tom: "blue" | "red" | "orange" | "emerald" | "slate" }) {
+  const tons = {
+    blue: "bg-blue-50 text-blue-700 border-blue-100",
+    red: "bg-red-50 text-red-700 border-red-100",
+    orange: "bg-orange-50 text-orange-700 border-orange-100",
+    emerald: "bg-emerald-50 text-emerald-700 border-emerald-100",
+    slate: "bg-slate-50 text-slate-700 border-slate-200",
+  };
+
+  return (
+    <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">{titulo}</p>
+          <p className="mt-2 text-3xl font-black tracking-[-0.05em] text-slate-950">{valor}</p>
+          <p className="mt-1 text-xs font-bold text-slate-500">{detalhe}</p>
+        </div>
+        <div className={`grid h-11 w-11 place-items-center rounded-2xl border ${tons[tom]}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function WhatsAppMonitorClient({ usuario }: { usuario: Usuario }) {
+  const [data, setData] = useState<AuditoriaData | null>(null);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState("");
+  const [status, setStatus] = useState<FiltroStatus>("aguardando_resposta");
+  const [busca, setBusca] = useState("");
+  const [selecionada, setSelecionada] = useState<Conversa | null>(null);
+  const [detalhe, setDetalhe] = useState<any>(null);
+  const [carregandoDetalhe, setCarregandoDetalhe] = useState(false);
+
+  async function carregar() {
+    setCarregando(true);
+    setErro("");
+
+    try {
+      const params = new URLSearchParams();
+      params.set("status", status);
+      params.set("busca", busca);
+      params.set("limite", "120");
+
+      const resposta = await fetch(`/api/whatsapp/auditoria?${params.toString()}`, { cache: "no-store" });
+      const json = (await resposta.json()) as AuditoriaData;
+
+      if (!resposta.ok || !json.ok) {
+        throw new Error(json.erro || "Não foi possível carregar o monitor WhatsApp.");
+      }
+
+      setData(json);
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : "Erro ao carregar WhatsApp.");
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  async function abrirDetalhe(conversa: Conversa) {
+    setSelecionada(conversa);
+    setDetalhe(null);
+    setCarregandoDetalhe(true);
+
+    try {
+      const resposta = await fetch(`/api/whatsapp/auditoria/conversa?conversa_id=${conversa.id}`, { cache: "no-store" });
+      const json = await resposta.json();
+
+      if (!resposta.ok || !json.ok) {
+        throw new Error(json.erro || "Não foi possível abrir a conversa.");
+      }
+
+      setDetalhe(json);
+    } catch (error) {
+      setDetalhe({ ok: false, erro: error instanceof Error ? error.message : "Erro ao abrir conversa." });
+    } finally {
+      setCarregandoDetalhe(false);
+    }
+  }
+
+  useEffect(() => {
+    carregar();
+    const interval = window.setInterval(() => carregar(), 45000);
+    return () => window.clearInterval(interval);
+  }, [status]);
+
+  const conversas = data?.conversas || [];
+
+  const conversasFiltradas = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    if (!termo) return conversas;
+
+    return conversas.filter((item) => {
+      const texto = [
+        item.nome_contato,
+        item.telefone_normalizado,
+        item.ultima_mensagem_preview,
+        item.usuario_nome,
+        item.lead_nome,
+        item.lead_veiculo,
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return texto.includes(termo);
+    });
+  }, [conversas, busca]);
+
+  const conectores = data?.conectores || [];
+
+  return (
+    <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1760px] space-y-5">
+        <section className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-700">WhatsApp operacional</p>
+              <h1 className="mt-2 text-3xl font-black tracking-[-0.05em] text-slate-950">Monitor de clientes aguardando resposta</h1>
+              <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-600">
+                Controle operacional do WhatsApp corporativo. O conector não envia mensagens: ele monitora conversas, cruza com leads e mostra quando o cliente está aguardando retorno.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={carregar}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-black text-white shadow-lg shadow-slate-900/15"
+            >
+              {carregando ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Atualizar
+            </button>
+          </div>
+        </section>
+
+        {data ? (
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-8">
+            <CardResumo titulo="Aguardando" valor={data.resumo.aguardando_resposta} detalhe="Cliente respondeu" icon={ShieldAlert} tom="red" />
+            <CardResumo titulo="Aguard. cliente" valor={data.resumo.aguardando_cliente} detalhe="Operador respondeu" icon={CheckCircle2} tom="emerald" />
+            <CardResumo titulo="Fora da base" valor={data.resumo.fora_da_base} detalhe="Sem lead vinculado" icon={AlertTriangle} tom="orange" />
+            <CardResumo titulo="Com lead" valor={data.resumo.com_lead} detalhe="Vinculadas" icon={UserRound} tom="blue" />
+            <CardResumo titulo="Maior espera" valor={tempoMinutos(data.resumo.maior_espera_minutos)} detalhe="Cliente aguardando" icon={Clock3} tom="red" />
+            <CardResumo titulo="Online" valor={data.resumo.conectores_online} detalhe="Conectores ativos" icon={Wifi} tom="emerald" />
+            <CardResumo titulo="Offline" valor={data.resumo.conectores_offline} detalhe="Sem heartbeat" icon={WifiOff} tom="slate" />
+            <CardResumo titulo="Ignoradas" valor={data.resumo.mensagens_tecnicas_ignoradas} detalhe="Status técnicos" icon={Filter} tom="slate" />
+          </section>
+        ) : null}
+
+        <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-wrap gap-2">
+              {[
+                ["aguardando_resposta", "Aguardando resposta"],
+                ["fora_da_base", "Sem lead"],
+                ["com_lead", "Com lead"],
+                ["aguardando_cliente", "Aguardando cliente"],
+                ["todos", "Todos"],
+              ].map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setStatus(key as FiltroStatus)}
+                  className={`rounded-full border px-4 py-2 text-sm font-black ${
+                    status === key ? "border-blue-200 bg-blue-700 text-white" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="relative w-full xl:w-[420px]">
+              <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+              <input
+                value={busca}
+                onChange={(event) => setBusca(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") carregar();
+                }}
+                placeholder="Buscar por telefone, contato, lead ou mensagem..."
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm font-bold outline-none focus:border-blue-600"
+              />
+            </div>
+          </div>
+        </section>
+
+        {erro ? (
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
+            <AlertTriangle className="mr-2 inline h-5 w-5" />
+            {erro}
+          </div>
+        ) : null}
+
+        {carregando ? (
+          <div className="grid min-h-[360px] place-items-center rounded-[28px] border border-slate-200 bg-white">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-700" />
+          </div>
+        ) : null}
+
+        {!carregando ? (
+          <section className="grid gap-5 xl:grid-cols-[1fr_360px]">
+            <div className="rounded-[28px] border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 p-5">
+                <h2 className="text-xl font-black text-slate-950">Fila de WhatsApp</h2>
+                <p className="mt-1 text-sm font-semibold text-slate-500">
+                  Mostra quem respondeu no WhatsApp, quem está aguardando retorno e quais conversas ainda não têm lead vinculado.
+                </p>
+              </div>
+
+              <div className="divide-y divide-slate-100">
+                {conversasFiltradas.length ? (
+                  conversasFiltradas.map((conversa) => (
+                    <button
+                      key={conversa.id}
+                      type="button"
+                      onClick={() => abrirDetalhe(conversa)}
+                      className="block w-full p-5 text-left transition hover:bg-slate-50"
+                    >
+                      <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={`rounded-full border px-3 py-1 text-xs font-black ${statusClass(conversa)}`}>{statusLabel(conversa)}</span>
+                            {conversa.lead_id ? (
+                              <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">Lead vinculado</span>
+                            ) : (
+                              <span className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-black text-orange-700">Sem lead</span>
+                            )}
+                          </div>
+
+                          <p className="mt-3 truncate text-lg font-black text-slate-950">{conversa.lead_nome || conversa.nome_contato || "Contato sem nome"}</p>
+
+                          <div className="mt-2 flex flex-wrap gap-4 text-xs font-bold text-slate-500">
+                            <span className="inline-flex items-center gap-1"><Phone className="h-3.5 w-3.5" /> {telefoneFormatado(conversa.telefone_normalizado)}</span>
+                            <span className="inline-flex items-center gap-1"><MessageCircle className="h-3.5 w-3.5" /> {conversa.ultima_direcao === "recebida" ? "Recebida do cliente" : "Enviada pelo operador"}</span>
+                            <span className="inline-flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" /> {dataHora(conversa.atualizado_em)}</span>
+                            {conversa.usuario_nome ? <span className="inline-flex items-center gap-1"><UserRound className="h-3.5 w-3.5" /> {conversa.usuario_nome}</span> : null}
+                          </div>
+
+                          <p className="mt-3 line-clamp-2 text-sm font-semibold leading-6 text-slate-600">{conversa.ultima_mensagem_preview || "Sem prévia da mensagem."}</p>
+                        </div>
+
+                        <div className="shrink-0 text-left xl:w-40 xl:text-right">
+                          <p className="text-xs font-black uppercase tracking-wide text-slate-400">Tempo aguardando</p>
+                          <p className={`mt-1 text-2xl font-black ${conversa.status_operacional_whatsapp === "cliente_aguardando_resposta" ? "text-red-700" : "text-slate-950"}`}>
+                            {tempoMinutos(conversa.minutos_aguardando)}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="p-10 text-center">
+                    <MessageCircle className="mx-auto h-10 w-10 text-slate-300" />
+                    <p className="mt-3 text-sm font-bold text-slate-500">Nenhuma conversa encontrada neste filtro.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <aside className="space-y-5">
+              <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                <h2 className="text-lg font-black text-slate-950">Conectores</h2>
+                <div className="mt-4 space-y-3">
+                  {conectores.length ? (
+                    conectores.map((conector) => {
+                      const online = String(conector.status || "").toLowerCase().includes("online") || String(conector.status || "").toLowerCase().includes("conectado");
+                      return (
+                        <div key={conector.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="font-black text-slate-950">{conector.nome || conector.identificador || "Conector WhatsApp"}</p>
+                            <span className={`rounded-full px-2 py-1 text-[11px] font-black ${online ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"}`}>
+                              {online ? "Online" : "Offline"}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-xs font-bold leading-5 text-slate-500">Último heartbeat: {dataHora(conector.ultimo_heartbeat_em)}</p>
+                          <p className="text-xs font-bold leading-5 text-slate-500">Última captura: {dataHora(conector.ultima_captura_em)}</p>
+                          {conector.usuario_nome ? <p className="text-xs font-bold leading-5 text-slate-500">Usuário: {conector.usuario_nome}</p> : null}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-500">Nenhum conector encontrado.</p>
+                  )}
+                </div>
+              </section>
+
+              <section className="rounded-[28px] border border-blue-100 bg-blue-50 p-5">
+                <div className="flex items-start gap-3">
+                  <Smartphone className="mt-1 h-5 w-5 text-blue-700" />
+                  <div>
+                    <h3 className="font-black text-blue-900">Regra operacional</h3>
+                    <p className="mt-2 text-sm font-bold leading-6 text-blue-800">
+                      Se a última mensagem foi recebida do cliente, o CRM considera cliente aguardando resposta. Se foi enviada pelo operador, fica aguardando retorno do cliente.
+                    </p>
+                  </div>
+                </div>
+              </section>
+            </aside>
+          </section>
+        ) : null}
+
+        {selecionada ? (
+          <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/45">
+            <div className="h-full w-full max-w-2xl overflow-y-auto bg-white shadow-2xl">
+              <div className="sticky top-0 z-10 border-b border-slate-200 bg-white p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-700">Detalhe da conversa</p>
+                    <h2 className="mt-1 text-2xl font-black text-slate-950">{selecionada.lead_nome || selecionada.nome_contato || "Contato WhatsApp"}</h2>
+                    <p className="mt-1 text-sm font-bold text-slate-500">{telefoneFormatado(selecionada.telefone_normalizado)}</p>
+                  </div>
+                  <button type="button" onClick={() => setSelecionada(null)} className="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 hover:bg-slate-50">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-5 p-5">
+                {carregandoDetalhe ? (
+                  <div className="grid min-h-[240px] place-items-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-700" />
+                  </div>
+                ) : detalhe?.erro ? (
+                  <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">{detalhe.erro}</div>
+                ) : (
+                  <>
+                    <section className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+                      <div className="flex flex-wrap gap-2">
+                        <span className={`rounded-full border px-3 py-1 text-xs font-black ${statusClass(selecionada)}`}>{statusLabel(selecionada)}</span>
+                        {selecionada.lead_id ? (
+                          <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">Lead vinculado</span>
+                        ) : (
+                          <span className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-black text-orange-700">Conversa sem lead vinculado</span>
+                        )}
+                      </div>
+
+                      <div className="mt-4 grid gap-3 text-sm font-bold text-slate-600 md:grid-cols-2">
+                        <p><strong className="text-slate-950">Última direção:</strong> {selecionada.ultima_direcao || "-"}</p>
+                        <p><strong className="text-slate-950">Atualizado em:</strong> {dataHora(selecionada.atualizado_em)}</p>
+                        <p><strong className="text-slate-950">Atendente:</strong> {selecionada.usuario_nome || "-"}</p>
+                        <p><strong className="text-slate-950">Tempo aguardando:</strong> {tempoMinutos(selecionada.minutos_aguardando)}</p>
+                      </div>
+
+                      {selecionada.lead_id ? (
+                        <a
+                          href={`/dashboard/leads/${selecionada.lead_id}`}
+                          className="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 text-sm font-black text-white"
+                        >
+                          Abrir lead <ExternalLink className="h-4 w-4" />
+                        </a>
+                      ) : (
+                        <p className="mt-4 rounded-2xl border border-orange-200 bg-orange-50 p-3 text-sm font-bold leading-6 text-orange-800">
+                          Esta conversa ainda não está vinculada a nenhum lead. Ela deve aparecer para revisão da ADM/supervisão.
+                        </p>
+                      )}
+                    </section>
+
+                    <section className="rounded-[24px] border border-slate-200 bg-white p-5">
+                      <h3 className="font-black text-slate-950">Mensagens registradas</h3>
+                      <div className="mt-4 space-y-3">
+                        {(detalhe?.mensagens || []).length ? (
+                          detalhe.mensagens.map((msg: any) => (
+                            <div key={msg.id} className={`rounded-2xl border p-3 ${msg.direcao === "recebida" ? "border-red-100 bg-red-50" : "border-emerald-100 bg-emerald-50"}`}>
+                              <div className="flex items-center justify-between gap-3">
+                                <span className={`rounded-full px-2 py-1 text-[11px] font-black ${msg.direcao === "recebida" ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>
+                                  {msg.direcao === "recebida" ? "Cliente" : "Operador"}
+                                </span>
+                                <span className="text-xs font-bold text-slate-500">{dataHora(msg.enviada_em || msg.criado_em)}</span>
+                              </div>
+                              <p className="mt-2 text-sm font-semibold leading-6 text-slate-700">{msg.mensagem_preview || "-"}</p>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-500">
+                            Ainda não há mensagens detalhadas nesta conversa. O monitor já usa a última prévia da conversa para alertas.
+                          </p>
+                        )}
+                      </div>
+                    </section>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </main>
+  );
+}
+
+
+===== FILE: C:\Users\AZUL\OneDrive\Área de Trabalho\flow-sales-crm\app\dashboard\3cx\page.tsx =====
+import { ModulePlaceholder } from "@/components/dashboard/ModulePlaceholder";
+
+export default function Page() {
+  return (
+    <ModulePlaceholder
+      title="Controle 3CX"
+      description="Monitor preparado para status operacional, ligações, tempo de chamada e classificação."
+    />
+  );
+}
+
+===== CONTEUDO APP API 3CX =====
+
+
+===== FILE: C:\Users\AZUL\OneDrive\Área de Trabalho\flow-sales-crm\app\api\3cx\status\route.ts =====
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+
+type Payload3CX = {
+  ramal?: string;
+  extension?: string;
+  numero?: string;
+  phone?: string;
+  usuario_id?: string;
+  evento?: string;
+  event?: string;
+  status?: string;
+  em_ligacao?: boolean;
+  motivo?: string;
+};
+
+function texto(valor: unknown) {
+  return String(valor || "").trim();
+}
+
+function normalizarEvento(body: Payload3CX) {
+  const bruto = texto(body.evento || body.event || body.status).toLowerCase();
+
+  if (typeof body.em_ligacao === "boolean") {
+    return body.em_ligacao ? "em_ligacao" : "disponivel";
+  }
+
+  if (["ringing", "ring", "incoming", "outgoing", "connected", "answered", "call_start", "start", "em_ligacao", "busy", "ocupado"].includes(bruto)) {
+    return "em_ligacao";
+  }
+
+  if (["hangup", "ended", "end", "finished", "idle", "available", "disponivel", "call_end"].includes(bruto)) {
+    return "disponivel";
+  }
+
+  return null;
+}
+
+function tokenRecebido(request: Request) {
+  return (
+    request.headers.get("x-flow-3cx-token") ||
+    request.headers.get("x-3cx-token") ||
+    request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ||
+    ""
+  ).trim();
+}
+
+async function buscarIntegracao3CX(supabase: any) {
+  const { data, error } = await supabase
+    .from("integracoes_configuracoes")
+    .select("id, chave, ativo, token_criptografado, parametros")
+    .eq("chave", "3cx")
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+function validarToken3CX(recebido: string, integracao: any) {
+  const envToken =
+    process.env.FLOW_3CX_STATUS_TOKEN ||
+    process.env.THREECX_STATUS_TOKEN ||
+    process.env.MONITOR_3CX_TOKEN ||
+    "";
+
+  const parametros = integracao?.parametros || {};
+  const tokensValidos = [
+    envToken,
+    parametros.webhook_token,
+    parametros.flow_webhook_token,
+    integracao?.token_criptografado,
+  ]
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+
+  if (tokensValidos.length === 0) return false;
+  return tokensValidos.includes(recebido);
+}
+
+async function buscarUsuarioPorPayload(supabase: any, body: Payload3CX) {
+  const usuarioId = texto(body.usuario_id);
+  const ramal = texto(body.ramal || body.extension || body.numero || body.phone);
+
+  if (usuarioId) {
+    const { data, error } = await supabase
+      .from("usuarios_internos")
+      .select("id, nome, email, perfil, ativo, recebe_leads, status_operacional, status_administrativo, ramal_3cx")
+      .eq("id", usuarioId)
+      .eq("ativo", true)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (data) return data;
+  }
+
+  if (ramal) {
+    const { data, error } = await supabase
+      .from("usuarios_internos")
+      .select("id, nome, email, perfil, ativo, recebe_leads, status_operacional, status_administrativo, ramal_3cx")
+      .eq("ramal_3cx", ramal)
+      .eq("ativo", true)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (data) return data;
+  }
+
+  return null;
+}
+
+async function regraStatus(supabase: any, chave: string) {
+  const { data, error } = await supabase
+    .from("operacao_status_tipos")
+    .select("chave, bloqueia_recebimento_leads, ativo")
+    .eq("chave", chave)
+    .eq("ativo", true)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function POST(request: Request) {
+  try {
+    const recebido = tokenRecebido(request);
+    const supabase = await createClient();
+    const integracao = await buscarIntegracao3CX(supabase);
+
+    if (!integracao?.ativo) {
+      return NextResponse.json(
+        {
+          ok: false,
+          erro: "Integração 3CX está desativada em Configurações > Integrações.",
+        },
+        { status: 403 }
+      );
+    }
+
+    if (!validarToken3CX(recebido, integracao)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          erro: "Token do webhook 3CX inválido ou não configurado em Configurações > Integrações.",
+        },
+        { status: 401 }
+      );
+    }
+
+    const body = (await request.json().catch(() => ({}))) as Payload3CX;
+    const statusNovo = normalizarEvento(body);
+
+    if (!statusNovo) {
+      return NextResponse.json(
+        { ok: false, erro: "Evento 3CX inválido. Envie connected/ringing para em_ligacao ou hangup/ended para disponivel." },
+        { status: 400 }
+      );
+    }
+
+    const usuario = await buscarUsuarioPorPayload(supabase, body);
+
+    if (!usuario) {
+      return NextResponse.json(
+        { ok: false, erro: "Usuário não encontrado pelo usuario_id ou ramal_3cx informado." },
+        { status: 404 }
+      );
+    }
+
+    if (usuario.status_administrativo && usuario.status_administrativo !== "disponivel") {
+      return NextResponse.json({ ok: true, ignorado: true, motivo: "Status administrativo não está disponível.", usuario });
+    }
+
+    if (statusNovo === "disponivel" && usuario.status_operacional !== "em_ligacao") {
+      return NextResponse.json({ ok: true, ignorado: true, motivo: "Fim de ligação ignorado porque o usuário não estava em ligação.", usuario });
+    }
+
+    const regra = await regraStatus(supabase, statusNovo);
+    if (!regra) {
+      return NextResponse.json({ ok: false, erro: `Regra de status ${statusNovo} não encontrada.` }, { status: 404 });
+    }
+
+    const recebeLeadsNovo = !regra.bloqueia_recebimento_leads;
+
+    const { data: atualizado, error: updateError } = await supabase
+      .from("usuarios_internos")
+      .update({
+        status_operacional: statusNovo,
+        status_operacional_atualizado_em: new Date().toISOString(),
+        recebe_leads: recebeLeadsNovo,
+        atualizado_em: new Date().toISOString(),
+      })
+      .eq("id", usuario.id)
+      .select("id, nome, email, perfil, ativo, recebe_leads, status_operacional, status_administrativo, ramal_3cx")
+      .single();
+
+    if (updateError) {
+      console.error("Erro ao atualizar status via 3CX:", updateError);
+      return NextResponse.json({ ok: false, erro: "Não foi possível atualizar status via 3CX." }, { status: 500 });
+    }
+
+    await supabase.from("usuario_status_logs").insert({
+      usuario_id: usuario.id,
+      status_anterior: usuario.status_operacional,
+      status_novo: statusNovo,
+      origem: "3cx_webhook",
+      motivo: texto(body.motivo) || (statusNovo === "em_ligacao" ? "Ligação detectada pelo 3CX." : "Fim de ligação detectado pelo 3CX."),
+      aplicado_por: null,
+      bloqueou_recebimento_leads: regra.bloqueia_recebimento_leads,
+      recebe_leads_anterior: usuario.recebe_leads,
+      recebe_leads_novo: recebeLeadsNovo,
+    });
+
+    return NextResponse.json({ ok: true, usuario: atualizado });
+  } catch (error) {
+    console.error("Erro inesperado no webhook/status 3CX:", error);
+    return NextResponse.json({ ok: false, erro: "Erro inesperado no webhook/status 3CX." }, { status: 500 });
+  }
+}
+
+===== TRECHO MENU DASHBOARDSHELL 3CX =====
+160:   {
+161:     label: "Agenda",
+162:     icon: CalendarDays,
+163:     tab: "agenda-hoje",
+164:     href: "/dashboard/configuracoes/agenda",
+165:     subitems: [
+166:       { label: "Hoje", tab: "agenda-hoje", href: "/dashboard/agenda" },
+167:       {
+168:         label: "Semana",
+169:         tab: "agenda-semana",
+170:         href: "/dashboard/agenda?periodo=semana",
+171:       },
+172:       {
+173:         label: "Mês",
+174:         tab: "agenda-mes",
+175:         href: "/dashboard/agenda?periodo=mes",
+176:       },
+177:     ],
+178:   },
+179:   {
+180:     label: "Controle 3CX",
+181:     icon: PhoneCall,
+182:     tab: "controle-3cx",
+183:     href: "/dashboard/3cx",
+184:     subitems: [
+185:       { label: "Monitor", tab: "controle-3cx", href: "/dashboard/3cx" },
+186:       {
+187:         label: "Ligações",
+188:         tab: "ligacoes-3cx",
+189:         href: "/dashboard/3cx?aba=ligacoes",
+190:       },
+191:       {
+192:         label: "Histórico",
+193:         tab: "historico-3cx",
+194:         href: "/dashboard/3cx/historico",
+195:       },
+196:       {
+197:         label: "Classificações",
+198:         tab: "classificacoes-3cx",
+199:         href: "/dashboard/3cx/classificacoes",
+200:       },
+201:       {
+202:         label: "Monitor WhatsApp",
+203:         tab: "whatsapp-3cx",
+204:         href: "/dashboard/3cx/whatsapp",
+205:       },
+206:     ],
+207:   },
+208:   {
+209:     label: "Vendas",
+210:     icon: BadgeDollarSign,
+211:     tab: "vendas",
+212:     href: "/dashboard/vendas",
+213:     subitems: [
+214:       {
+215:         label: "Acompanhar vendas",
+
+===== TRECHO MENU CONFIGURACOES / INTEGRACOES =====
+280:     label: "Usuários",
+281:     icon: UserCog,
+282:     tab: "usuarios",
+283:     href: "/dashboard/usuarios",
+284:     perfis: ["adm", "admin", "suporte", "gerente", "supervisor"],
+285:     subitems: [
+286:       { label: "Todos", tab: "usuarios", href: "/dashboard/usuarios" },
+287:       {
+288:         label: "Perfis",
+289:         tab: "usuarios-perfis",
+290:         href: "/dashboard/usuarios/permissoes",
+291:       },
+292:       {
+293:         label: "Status",
+294:         tab: "usuarios-status",
+295:         href: "/dashboard/usuarios?aba=status",
+296:       },
+297:     ],
+298:   },
+299:   {
+300:     label: "Configurações",
+301:     icon: Settings,
+302:     tab: "configuracoes",
+303:     href: "/dashboard/configuracoes",
+304:     subitems: [
+305:       {
+306:         label: "Sistema",
+307:         tab: "configuracoes-sistema",
+308:         href: "/dashboard/configuracoes",
+309:         children: [
+310:           {
+311:             label: "Saúde do sistema",
+312:             href: "/dashboard/sistema/saude",
+313:             tab: "sistema-saude",
+314:           },
+315:           {
+316:             label: "Geral",
+317:             tab: "configuracoes",
+318:             href: "/dashboard/configuracoes/geral",
+319:           },
+320:           {
+321:             label: "Tema",
+322:             tab: "configuracoes-tema",
+323:             href: "/dashboard/configuracoes/tema",
+324:           },
+325:           {
+326:             label: "Notificações",
+327:             tab: "configuracoes-notificacoes",
+328:             href: "/dashboard/configuracoes/notificacoes",
+329:           },
+330:           {
+331:             label: "Auditoria",
+332:             tab: "configuracoes-auditoria",
+333:             href: "/dashboard/sistema/auditoria",
+334:           },
+335:         ],
+336:       },
+337:       {
+338:         label: "Operação",
+339:         tab: "configuracoes-operacao",
+340:         href: "/dashboard/configuracoes/operacao-pausas",
+341:         children: [
+342:           {
+343:             label: "Operação e pausas",
+344:             tab: "configuracoes-operacao-pausas",
+345:             href: "/dashboard/configuracoes/operacao-pausas",
+346:             perfis: ["adm", "admin", "suporte"],
+347:           },
+348:         ],
+349:       },
+350:       {
+351:         label: "CRM e Leads",
+352:         tab: "configuracoes-crm-leads",
+353:         href: "/dashboard/configuracoes/crm-leads",
+354:         children: [
+355:           {
+356:             label: "CRM e leads",
+357:             tab: "configuracoes-leads",
+358:             href: "/dashboard/configuracoes/crm-leads",
+359:           },
+360:           {
+361:             label: "Agenda",
+362:             tab: "configuracoes-agenda",
+363:             href: "/dashboard/configuracoes/agenda",
+364:           },
+365:           {
+366:             label: "Kanban",
+367:             tab: "configuracoes-kanban",
+368:             href: "/dashboard/configuracoes/kanban",
+369:           },
+370:         ],
+371:       },
+372:       {
+373:         label: "Integrações",
+374:         tab: "configuracoes-integracoes-grupo",
+375:         href: "/dashboard/configuracoes/integracoes",
+376:         children: [
+377:           {
+378:             label: "Integrações",
+379:             tab: "configuracoes-integracoes",
+380:             href: "/dashboard/configuracoes/integracoes",
+381:           },
+382:           {
+383:             label: "API",
+384:             tab: "configuracoes-api",
+385:             href: "/dashboard/configuracoes/api",
+386:           },
+387:         ],
+388:       },
+389:     ],
+390:   },

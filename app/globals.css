@@ -1,0 +1,359 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #0f172a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 23, 42, 0.08) transparent;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: transparent;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.08);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(37, 99, 235, 0.18);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 23, 42, 0.08) transparent;
+}
+
+/* Flow Sales CRM - tema funcional global */
+html.flow-theme-claro {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  color-scheme: light;
+}
+
+html.flow-theme-escuro {
+  --background: #020617;
+  --foreground: #e5edf8;
+  color-scheme: dark;
+}
+
+html.flow-theme-escuro body {
+  background: #020617 !important;
+  color: #e5edf8 !important;
+}
+
+html.flow-theme-escuro .bg-white,
+html.flow-theme-escuro .bg-white\/95,
+html.flow-theme-escuro .bg-white\/90,
+html.flow-theme-escuro .bg-slate-50 {
+  background-color: #0f172a !important;
+}
+
+html.flow-theme-escuro .bg-slate-100 {
+  background-color: #1e293b !important;
+}
+
+html.flow-theme-escuro .bg-blue-50 {
+  background-color: rgba(37, 99, 235, 0.18) !important;
+}
+
+html.flow-theme-escuro .bg-red-50 {
+  background-color: rgba(220, 38, 38, 0.16) !important;
+}
+
+html.flow-theme-escuro .bg-emerald-50 {
+  background-color: rgba(5, 150, 105, 0.16) !important;
+}
+
+html.flow-theme-escuro .bg-amber-50,
+html.flow-theme-escuro .bg-orange-50 {
+  background-color: rgba(245, 158, 11, 0.16) !important;
+}
+
+html.flow-theme-escuro .text-slate-950,
+html.flow-theme-escuro .text-slate-900,
+html.flow-theme-escuro .text-slate-800,
+html.flow-theme-escuro .text-slate-700 {
+  color: #f8fafc !important;
+}
+
+html.flow-theme-escuro .text-slate-600,
+html.flow-theme-escuro .text-slate-500,
+html.flow-theme-escuro .text-slate-400 {
+  color: #cbd5e1 !important;
+}
+
+html.flow-theme-escuro .border-slate-100,
+html.flow-theme-escuro .border-slate-200,
+html.flow-theme-escuro .border-slate-300 {
+  border-color: #334155 !important;
+}
+
+html.flow-theme-escuro .shadow-sm,
+html.flow-theme-escuro .shadow,
+html.flow-theme-escuro .shadow-xl,
+html.flow-theme-escuro .shadow-2xl {
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.42) !important;
+}
+
+html.flow-theme-escuro input,
+html.flow-theme-escuro select,
+html.flow-theme-escuro textarea {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+html.flow-theme-escuro input::placeholder,
+html.flow-theme-escuro textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+html.flow-theme-escuro .placeholder\:text-slate-400::placeholder {
+  color: #94a3b8 !important;
+}
+
+html.flow-theme-escuro .hover\:bg-slate-50:hover,
+html.flow-theme-escuro .hover\:bg-slate-100:hover {
+  background-color: #1e293b !important;
+}
+
+html.flow-theme-escuro .hover\:text-slate-950:hover,
+html.flow-theme-escuro .hover\:text-slate-900:hover {
+  color: #ffffff !important;
+}
+
+html.flow-density-compacta .flow-shell main,
+html.flow-density-compacta .flow-shell section {
+  letter-spacing: -0.01em;
+}
+
+html.flow-density-compacta .flow-shell .rounded-3xl {
+  border-radius: 1.15rem !important;
+}
+
+html.flow-density-ampla .flow-shell main {
+  line-height: 1.65;
+}
+
+html.flow-density-ampla .flow-shell .rounded-3xl {
+  border-radius: 2rem !important;
+}
+
+html.flow-font-grande body {
+  font-size: 16.5px;
+}
+
+html.flow-font-compacta body {
+  font-size: 14px;
+}
+
+[data-theme="dark"] .app-shell-logo {
+  filter: brightness(0) invert(1);
+}
+
+/* Logo branca no tema escuro */
+html[data-theme="dark"] img[alt="Flow Sales CRM"],
+body[data-theme="dark"] img[alt="Flow Sales CRM"],
+[data-theme="dark"] img[alt="Flow Sales CRM"],
+html.dark img[alt="Flow Sales CRM"],
+.dark img[alt="Flow Sales CRM"] {
+  filter: brightness(0) invert(1) !important;
+}
+
+/* Logo branca no tema escuro do Flow Sales CRM */
+html.flow-theme-escuro .app-shell-logo,
+html[data-flow-theme="escuro"] .app-shell-logo {
+  filter: grayscale(1) brightness(0) invert(1) contrast(1.55) !important;
+}
+/* FLOW APARENCIA REAL */
+html.flow-font-padrao {
+  font-size: 16px;
+}
+
+html.flow-font-grande {
+  font-size: 17.5px;
+}
+
+html.flow-font-compacta {
+  font-size: 14.8px;
+}
+
+html.flow-density-compacta body {
+  letter-spacing: -0.01em;
+}
+
+html.flow-density-ampla body {
+  letter-spacing: 0.005em;
+}
+
+html[data-flow-color="emerald"] .bg-blue-700,
+html[data-flow-color="emerald"] .hover\:bg-blue-700:hover,
+html[data-flow-color="emerald"] .bg-blue-800,
+html[data-flow-color="emerald"] .hover\:bg-blue-800:hover {
+  background-color: #059669 !important;
+}
+
+html[data-flow-color="emerald"] .text-blue-700,
+html[data-flow-color="emerald"] .group-hover\:text-blue-500:hover {
+  color: #047857 !important;
+}
+
+html[data-flow-color="emerald"] .bg-blue-50 {
+  background-color: #ecfdf5 !important;
+}
+
+html[data-flow-color="emerald"] .border-blue-200,
+html[data-flow-color="emerald"] .hover\:border-blue-200:hover {
+  border-color: #a7f3d0 !important;
+}
+
+html[data-flow-color="slate"] .bg-blue-700,
+html[data-flow-color="slate"] .hover\:bg-blue-700:hover,
+html[data-flow-color="slate"] .bg-blue-800,
+html[data-flow-color="slate"] .hover\:bg-blue-800:hover {
+  background-color: #334155 !important;
+}
+
+html[data-flow-color="slate"] .text-blue-700,
+html[data-flow-color="slate"] .group-hover\:text-blue-500:hover {
+  color: #334155 !important;
+}
+
+html[data-flow-color="slate"] .bg-blue-50 {
+  background-color: #f1f5f9 !important;
+}
+
+html[data-flow-color="slate"] .border-blue-200,
+html[data-flow-color="slate"] .hover\:border-blue-200:hover {
+  border-color: #cbd5e1 !important;
+}
+
+html.flow-theme-escuro body {
+  background-color: #020617 !important;
+  color: #e2e8f0 !important;
+}
+
+html.flow-theme-escuro .bg-slate-50,
+html.flow-theme-escuro .bg-white {
+  background-color: #0f172a !important;
+}
+
+html.flow-theme-escuro .bg-slate-100 {
+  background-color: #1e293b !important;
+}
+
+html.flow-theme-escuro .border-slate-100,
+html.flow-theme-escuro .border-slate-200,
+html.flow-theme-escuro .border-slate-300 {
+  border-color: #334155 !important;
+}
+
+html.flow-theme-escuro .text-slate-950,
+html.flow-theme-escuro .text-slate-900,
+html.flow-theme-escuro .text-slate-800,
+html.flow-theme-escuro .text-slate-700 {
+  color: #f8fafc !important;
+}
+
+html.flow-theme-escuro .text-slate-600,
+html.flow-theme-escuro .text-slate-500,
+html.flow-theme-escuro .text-slate-400 {
+  color: #cbd5e1 !important;
+}
+
+html.flow-theme-escuro input,
+html.flow-theme-escuro select,
+html.flow-theme-escuro textarea {
+  background-color: #020617 !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+html.flow-theme-escuro .shadow-sm,
+html.flow-theme-escuro .shadow-md,
+html.flow-theme-escuro .shadow-xl,
+html.flow-theme-escuro .shadow-2xl {
+  box-shadow: none !important;
+}
+
+/* FLOW INTEGRACOES INPUTS */
+.input-flow {
+  height: 44px;
+  width: 100%;
+  border-radius: 0.9rem;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  padding: 0 0.85rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #1e293b;
+  outline: none;
+}
+
+.input-flow:focus {
+  border-color: #2563eb;
+  background: #ffffff;
+}
+
+.textarea-flow {
+  min-height: 150px;
+  width: 100%;
+  resize: vertical;
+  border-radius: 0.9rem;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  padding: 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #1e293b;
+  outline: none;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+}
+
+.textarea-flow:focus {
+  border-color: #2563eb;
+  background: #ffffff;
+}
+
+html.flow-theme-escuro .input-flow,
+html.flow-theme-escuro .textarea-flow {
+  background: #020617;
+  color: #f8fafc;
+  border-color: #334155;
+}

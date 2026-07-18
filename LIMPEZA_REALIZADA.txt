@@ -1,0 +1,15 @@
+﻿FLOW SALES - CÃ“PIA LIMPA
+Data: 18/07/2026 16:03:36
+Origem: C:\Users\AZUL\Desktop\flow-sales-crm
+Raiz encontrada: C:\Users\AZUL\Desktop\flow-sales-crm
+Destino: C:\Users\AZUL\Desktop\Flow-Sales-Limpo_20260718_160335
+
+Nada foi removido ou alterado na origem.
+
+Pastas ignoradas:
+node_modules, .next, .git, .turbo, coverage, dist, out, .vercel
+
+ExtensÃµes ignoradas:
+.log, .bak, .tmp, .zip, .7z, .rar
+
+PrÃ³ximo passo: aguardar orientaÃ§Ã£o antes de executar npm install.
