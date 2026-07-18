@@ -8,7 +8,6 @@ import { createClient } from "@/lib/supabase/client";
 // import { NotificacoesPopup } from "@/components/dashboard/NotificacoesPopup";
 import {
   BadgeDollarSign,
-  BarChart3,
   Bell,
   CalendarDays,
   ChevronDown,
@@ -21,7 +20,6 @@ import {
   Settings,
   UserCog,
   Users,
-  WalletCards,
   X,
 } from "lucide-react";
 
@@ -51,6 +49,7 @@ type ConfiguracoesApi = {
   ok: boolean;
   configuracoes?: {
     sistema?: ConfigItem[];
+    global?: ConfigItem[];
     perfil?: ConfigItem[];
     usuario?: ConfigItem[];
   };
@@ -61,9 +60,13 @@ type SubItem = {
   tab: string;
   href: string;
   perfis?: string[];
+  children?: SubItem[];
 };
 
+type MenuSection = "rotina" | "gestao" | "sistema";
+
 type MenuItem = {
+  secao: MenuSection;
   label: string;
   icon: React.ElementType;
   tab: string;
@@ -72,29 +75,33 @@ type MenuItem = {
   subitems: SubItem[];
 };
 
+const perfisGestao = ["adm", "admin", "suporte", "gerente", "supervisor"];
+const perfisAdministracao = [
+  "adm",
+  "admin",
+  "suporte",
+  "gerente",
+  "supervisor",
+];
+
+const menuSectionLabels: Record<MenuSection, string> = {
+  rotina: "Trabalho",
+  gestao: "Gestão",
+  sistema: "Sistema",
+};
+
 const menuItems: MenuItem[] = [
   {
-    label: "Dashboard",
+    secao: "rotina",
+    label: "Hoje",
     icon: LayoutDashboard,
     tab: "dashboard-geral",
     href: "/dashboard",
-    subitems: [
-      { label: "Visão geral", tab: "dashboard-geral", href: "/dashboard" },
-      {
-        label: "Operacional",
-        tab: "dashboard-operacional",
-        href: "/dashboard?visao=operacional",
-      },
-      {
-        label: "Estratégico",
-        tab: "dashboard-estrategico",
-        href: "/dashboard?visao=estrategico",
-        perfis: ["adm", "admin", "suporte", "gerente", "supervisor"],
-      },
-    ],
+    subitems: [],
   },
   {
-    label: "CRM de leads",
+    secao: "rotina",
+    label: "Atendimento",
     icon: Users,
     tab: "leads-ativos",
     href: "/dashboard/leads",
@@ -106,61 +113,47 @@ const menuItems: MenuItem[] = [
         href: "/dashboard/leads/tarefas",
       },
       {
+        label: "Funil de atendimento",
+        tab: "kanban-funil",
+        href: "/dashboard/kanban",
+      },
+      {
+        label: "Meus WhatsApps",
+        tab: "whatsapp-3cx",
+        href: "/dashboard/3cx/whatsapp",
+      },
+      {
         label: "Novo lead",
         tab: "novo-lead",
         href: "/dashboard/leads/novo",
-        perfis: ["adm", "admin", "suporte", "gerente", "supervisor"],
+        perfis: perfisGestao,
       },
       {
         label: "Solicitações",
         tab: "solicitacoes-leads",
         href: "/dashboard/leads/solicitacoes",
-        perfis: ["adm", "admin", "suporte", "gerente", "supervisor"],
+        perfis: perfisGestao,
       },
       {
         label: "Importar base",
         tab: "importar-base",
         href: "/dashboard/c2s",
-        perfis: ["adm", "admin", "suporte", "gerente", "supervisor"],
+        perfis: perfisGestao,
       },
       {
         label: "Arquivados",
         tab: "leads-arquivados",
         href: "/dashboard/leads?filtro=arquivados",
-        perfis: ["adm", "admin", "suporte", "gerente", "supervisor"],
+        perfis: perfisGestao,
       },
     ],
   },
   {
-    label: "Kanban",
-    icon: WalletCards,
-    tab: "kanban-funil",
-    href: "/dashboard/configuracoes/kanban",
-    subitems: [
-      {
-        label: "Funil completo",
-        tab: "kanban-funil",
-        href: "/dashboard/kanban",
-      },
-      {
-        label: "Minhas oportunidades",
-        tab: "kanban-minhas",
-        href: "/dashboard/kanban?visao=minhas",
-      },
-
-      {
-        label: "Configurar funil",
-        tab: "kanban-configuracoes",
-        href: "/dashboard/kanban/configuracoes",
-        perfis: ["adm", "admin", "suporte", "gerente", "supervisor"],
-      },
-    ],
-  },
-  {
+    secao: "rotina",
     label: "Agenda",
     icon: CalendarDays,
     tab: "agenda-hoje",
-    href: "/dashboard/configuracoes/agenda",
+    href: "/dashboard/agenda",
     subitems: [
       { label: "Hoje", tab: "agenda-hoje", href: "/dashboard/agenda" },
       {
@@ -176,12 +169,14 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
-    label: "Controle 3CX",
+    secao: "gestao",
+    label: "Comunicação",
     icon: PhoneCall,
     tab: "controle-3cx",
     href: "/dashboard/3cx",
+    perfis: perfisGestao,
     subitems: [
-      { label: "Monitor", tab: "controle-3cx", href: "/dashboard/3cx" },
+      { label: "Equipe agora", tab: "controle-3cx", href: "/dashboard/3cx" },
       {
         label: "Ligações",
         tab: "ligacoes-3cx",
@@ -197,15 +192,11 @@ const menuItems: MenuItem[] = [
         tab: "classificacoes-3cx",
         href: "/dashboard/3cx/classificacoes",
       },
-      {
-        label: "Monitor WhatsApp",
-        tab: "whatsapp-3cx",
-        href: "/dashboard/3cx/whatsapp",
-      },
     ],
   },
   {
-    label: "Vendas",
+    secao: "gestao",
+    label: "Resultados",
     icon: BadgeDollarSign,
     tab: "vendas",
     href: "/dashboard/vendas",
@@ -225,57 +216,47 @@ const menuItems: MenuItem[] = [
         tab: "vendas-pendentes",
         href: "/dashboard/vendas/pendentes",
       },
-    ],
-  },
-  {
-    label: "Relatórios",
-    icon: BarChart3,
-    tab: "relatorios",
-    href: "/dashboard/relatorios",
-    perfis: ["adm", "admin", "suporte", "gerente", "supervisor"],
-    subitems: [
       {
-        label: "Geral",
+        label: "Relatórios",
         tab: "relatorios",
-        href: "/dashboard/configuracoes/geral",
-      },
-      {
-        label: "Equipe",
-        tab: "relatorios-equipe",
-        href: "/dashboard/relatorios?aba=equipe",
-      },
-      {
-        label: "Colaboradores",
-        tab: "relatorios-colaboradores",
-        href: "/dashboard/relatorios?aba=colaboradores",
+        href: "/dashboard/relatorios",
+        perfis: perfisGestao,
       },
     ],
   },
   {
-    label: "Usuários",
+    secao: "gestao",
+    label: "Equipe",
     icon: UserCog,
     tab: "usuarios",
     href: "/dashboard/usuarios",
-    perfis: ["adm", "admin", "suporte", "gerente", "supervisor"],
+    perfis: perfisGestao,
     subitems: [
-      { label: "Todos", tab: "usuarios", href: "/dashboard/usuarios" },
+      { label: "Pessoas", tab: "usuarios", href: "/dashboard/usuarios" },
       {
-        label: "Perfis",
-        tab: "usuarios-perfis",
-        href: "/dashboard/usuarios/permissoes",
-      },
-      {
-        label: "Status",
+        label: "Status da equipe",
         tab: "usuarios-status",
         href: "/dashboard/usuarios?aba=status",
+      },
+      {
+        label: "Distribuição de leads",
+        tab: "distribuicao",
+        href: "/dashboard/distribuicao",
+      },
+      {
+        label: "Perfis e acessos",
+        tab: "usuarios-perfis",
+        href: "/dashboard/usuarios/permissoes",
       },
     ],
   },
   {
-    label: "Configurações",
+    secao: "sistema",
+    label: "Administração",
     icon: Settings,
     tab: "configuracoes",
     href: "/dashboard/configuracoes",
+    perfis: perfisAdministracao,
     subitems: [
       {
         label: "Sistema",
@@ -283,17 +264,17 @@ const menuItems: MenuItem[] = [
         href: "/dashboard/configuracoes",
         children: [
           {
+            label: "Visão geral",
+            tab: "configuracoes",
+            href: "/dashboard/configuracoes",
+          },
+          {
             label: "Saúde do sistema",
             href: "/dashboard/sistema/saude",
             tab: "sistema-saude",
           },
           {
-            label: "Geral",
-            tab: "configuracoes",
-            href: "/dashboard/configuracoes/geral",
-          },
-          {
-            label: "Tema",
+            label: "Aparência",
             tab: "configuracoes-tema",
             href: "/dashboard/configuracoes/tema",
           },
@@ -312,19 +293,6 @@ const menuItems: MenuItem[] = [
       {
         label: "Operação",
         tab: "configuracoes-operacao",
-        href: "/dashboard/configuracoes/operacao-pausas",
-        children: [
-          {
-            label: "Operação e pausas",
-            tab: "configuracoes-operacao-pausas",
-            href: "/dashboard/configuracoes/operacao-pausas",
-            perfis: ["adm", "admin", "suporte"],
-          },
-        ],
-      },
-      {
-        label: "CRM e Leads",
-        tab: "configuracoes-crm-leads",
         href: "/dashboard/configuracoes/crm-leads",
         children: [
           {
@@ -338,9 +306,15 @@ const menuItems: MenuItem[] = [
             href: "/dashboard/configuracoes/agenda",
           },
           {
-            label: "Kanban",
+            label: "Funil",
             tab: "configuracoes-kanban",
             href: "/dashboard/configuracoes/kanban",
+          },
+          {
+            label: "Status e pausas",
+            tab: "configuracoes-operacao-pausas",
+            href: "/dashboard/configuracoes/operacao-pausas",
+            perfis: ["adm", "admin", "suporte"],
           },
         ],
       },
@@ -350,7 +324,7 @@ const menuItems: MenuItem[] = [
         href: "/dashboard/configuracoes/integracoes",
         children: [
           {
-            label: "Integrações",
+            label: "C2S, 3CX e WhatsApp",
             tab: "configuracoes-integracoes",
             href: "/dashboard/configuracoes/integracoes",
           },
@@ -521,17 +495,17 @@ export function DashboardShell({
 }: DashboardShellProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const isPaginaLeads = pathname.startsWith("/dashboard/leads");
   const supabase = createClient();
   const menuContentRef = useRef<HTMLDivElement | null>(null);
 
-  const [menuAberto, setMenuAberto] = useState(true);
+  const [menuAberto, setMenuAberto] = useState(false);
+  const [menuMobileAberto, setMenuMobileAberto] = useState(false);
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const [openSubmenus, setOpenSubmenus] = useState<string[]>([]);
   const [buscaGlobal, setBuscaGlobal] = useState("");
   const [search, setSearch] = useState("");
   const [dropdownAberto, setDropdownAberto] = useState<
-    "notificacoes" | "avatar" | "usuarios" | null
+    "notificacoes" | "avatar" | null
   >(null);
   const [totalNotificacoes, setTotalNotificacoes] = useState(0);
   const [statusOperacional, setStatusOperacional] = useState(
@@ -540,6 +514,7 @@ export function DashboardShell({
   const [salvandoStatus, setSalvandoStatus] = useState(false);
 
   const perfil = normalizarPerfil(usuario.perfil);
+  const menuVisualAberto = menuAberto || menuMobileAberto;
 
   const itensVisiveis = useMemo(() => {
     return menuItems
@@ -547,7 +522,7 @@ export function DashboardShell({
       .map((item) => ({
         ...item,
         subitems: item.subitems.filter((subitem) => {
-          if ("children" in subitem) {
+          if (subitem.children?.length) {
             return subitem.children.some((child) =>
               podeVer(perfil, child.perfis),
             );
@@ -558,10 +533,9 @@ export function DashboardShell({
       }));
   }, [perfil]);
 
-  function fecharMenu() {
+  function fecharMenuMobile() {
+    setMenuMobileAberto(false);
     setOpenSubmenus([]);
-    setMenuAberto(false);
-    setOpenMenus([]);
   }
 
   function toggleSubmenu(label: string) {
@@ -573,7 +547,9 @@ export function DashboardShell({
   }
 
   function toggleMenu(label: string) {
-    setMenuAberto(true);
+    if (!menuMobileAberto) {
+      setMenuAberto(true);
+    }
     setOpenMenus((current) =>
       current.includes(label)
         ? current.filter((item) => item !== label)
@@ -670,12 +646,8 @@ export function DashboardShell({
         corPrincipal,
         fonte: fonteFinal,
       });
-      setMenuAberto(
-        Boolean(
-          preferenciasUsuario.menu_aberto ??
-          aparenciaGlobal.menu_padrao !== "fechado",
-        ),
-      );
+      // O menu lateral permanece recolhido por padrão e expande ao receber o mouse.
+      setMenuAberto(false);
     } catch {
       aplicarTemaNoDocumento({
         tema: "claro",
@@ -693,10 +665,10 @@ export function DashboardShell({
   }, [pathname]);
 
   useEffect(() => {
-    if (!menuAberto) {
+    if (!menuAberto && !menuMobileAberto) {
       setOpenSubmenus([]);
     }
-  }, [menuAberto]);
+  }, [menuAberto, menuMobileAberto]);
 
   useEffect(() => {
     carregarConfiguracoesVisuais();
@@ -717,14 +689,26 @@ export function DashboardShell({
   }, []);
 
   useEffect(() => {
-    const ativo = itensVisiveis.find(
-      (item) =>
-        item.subitems.some((sub) => hrefAtivo(pathname, sub.href)) ||
-        hrefAtivo(pathname, item.href),
-    );
-    if (ativo)
+    const ativo = itensVisiveis.find((item) => {
+      if (item.subitems.length === 0) {
+        return hrefAtivo(pathname, item.href);
+      }
+
+      return item.subitems.some((subitem) => {
+        if (subitem.children?.length) {
+          return subitem.children.some((child) =>
+            hrefSubitemAtivo(pathname, search, child.href),
+          );
+        }
+
+        return hrefSubitemAtivo(pathname, search, subitem.href);
+      });
+    });
+
+    if (ativo) {
       setOpenMenus((current) => Array.from(new Set([...current, ativo.label])));
-  }, [pathname, itensVisiveis]);
+    }
+  }, [pathname, search, itensVisiveis]);
 
   async function carregarMeuStatus() {
     try {
@@ -783,137 +767,190 @@ export function DashboardShell({
   }, []);
 
   return (
-    <div className="flow-shell min-h-screen bg-slate-50 text-slate-950">
+    <div className="flow-shell min-h-screen bg-[#f4f5f7] text-slate-950">
+      {menuMobileAberto ? (
+        <button
+          type="button"
+          aria-label="Fechar menu"
+          onClick={fecharMenuMobile}
+          className="fixed inset-0 z-30 bg-slate-950/20 backdrop-blur-sm lg:hidden"
+        />
+      ) : null}
+
       <aside
         onClick={(event) => event.stopPropagation()}
-        onMouseEnter={() => setMenuAberto(true)}
-        onMouseLeave={fecharMenu}
-        className={`fixed inset-y-0 left-0 z-40 hidden border-r border-slate-200 bg-white shadow-sm transition-all duration-300 lg:block ${
-          menuAberto ? "w-[250px]" : "w-[76px]"
-        }`}
+        onMouseEnter={() => {
+          if (!menuMobileAberto) setMenuAberto(true);
+        }}
+        onMouseLeave={() => {
+          if (!menuMobileAberto) setMenuAberto(false);
+        }}
+        className={`flow-ios-sidebar fixed inset-y-0 left-0 z-40 flex-col border-r border-white/70 bg-white/85 shadow-[0_18px_55px_rgba(15,23,42,0.10)] backdrop-blur-2xl transition-[width,transform] duration-300 ${
+          menuMobileAberto ? "flex translate-x-0" : "hidden -translate-x-full"
+        } w-[286px] lg:flex lg:translate-x-0 ${menuAberto ? "lg:w-[264px]" : "lg:w-[84px]"}`}
       >
-        <div className="flex h-full flex-col">
-          <button
-            type="button"
-            onClick={() => setMenuAberto(true)}
-            className={`flex h-[76px] items-center border-b border-slate-100 px-4 ${
-              menuAberto ? "justify-start" : "justify-center"
+        <div className="flex h-full min-h-0 flex-col">
+          <div
+            className={`flex h-[76px] shrink-0 items-center border-b border-slate-200/70 px-4 ${
+              menuVisualAberto ? "justify-between" : "justify-center"
             }`}
           >
-            <Image
-              src={menuAberto ? "/logo-slogan.png" : "/logo.png"}
-              alt="Flow Sales CRM"
-              width={menuAberto ? 170 : 36}
-              height={menuAberto ? 52 : 36}
-              priority
-              style={
-                menuAberto
-                  ? { width: "170px", height: "auto" }
-                  : { width: "36px", height: "36px" }
-              }
-              className="object-contain app-shell-logo"
-            />
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (menuMobileAberto) {
+                  fecharMenuMobile();
+                  return;
+                }
+                setMenuAberto((atual) => !atual);
+              }}
+              className={`flex min-w-0 items-center rounded-2xl transition hover:bg-slate-100/80 ${
+                menuVisualAberto ? "gap-3 px-2 py-2" : "p-2"
+              }`}
+              title={menuAberto ? "Recolher menu" : "Expandir menu"}
+            >
+              <Image
+                src={menuVisualAberto ? "/logo-slogan.png" : "/logo.png"}
+                alt="Flow Sales CRM"
+                width={menuVisualAberto ? 158 : 36}
+                height={menuVisualAberto ? 48 : 36}
+                priority
+                style={
+                  menuVisualAberto
+                    ? { width: "158px", height: "auto" }
+                    : { width: "36px", height: "36px" }
+                }
+                className="app-shell-logo object-contain"
+              />
+            </button>
+
+            {menuMobileAberto ? (
+              <button
+                type="button"
+                onClick={fecharMenuMobile}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 lg:hidden"
+                aria-label="Fechar menu"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            ) : null}
+          </div>
 
           <nav
             ref={menuContentRef}
             onMouseMove={handleMenuAutoScroll}
-            className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="min-h-0 flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
-            <div className="space-y-1.5">
-              {itensVisiveis.map((item) => {
-                const Icon = item.icon;
-                const isDashboardPrincipal = item.href === "/dashboard";
-                const itemAtivo = isDashboardPrincipal
-                  ? pathname === "/dashboard"
-                  : hrefAtivo(pathname, item.href);
+            <div className="space-y-5">
+              {(["rotina", "gestao", "sistema"] as MenuSection[]).map(
+                (secao) => {
+                  const itensSecao = itensVisiveis.filter(
+                    (item) => item.secao === secao,
+                  );
 
-                const isActive =
-                  item.subitems.some((sub) => {
-                    if ("children" in sub) {
-                      return sub.children.some((child) =>
-                        hrefAtivo(pathname, child.href),
-                      );
-                    }
+                  if (itensSecao.length === 0) return null;
 
-                    return hrefAtivo(pathname, sub.href);
-                  }) ||
-                  activeTab === item.tab ||
-                  itemAtivo;
-                const isOpen = openMenus.includes(item.label);
+                  return (
+                    <div key={secao} className="space-y-1.5">
+                      {menuVisualAberto ? (
+                        <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+                          {menuSectionLabels[secao]}
+                        </p>
+                      ) : (
+                        <div className="mx-auto mb-2 h-px w-7 bg-slate-200" />
+                      )}
 
-                return (
-                  <div key={item.label}>
-                    <button
-                      type="button"
-                      onClick={() => toggleMenu(item.label)}
-                      className={`flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold transition ${
-                        isActive
-                          ? "bg-blue-700 text-white shadow-sm shadow-blue-700/20"
-                          : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
-                      } ${menuAberto ? "justify-start" : "justify-center"}`}
-                      title={item.label}
-                    >
-                      <Icon className="h-5 w-5 shrink-0" />
-                      {menuAberto ? (
-                        <span className="flex-1 text-left">{item.label}</span>
-                      ) : null}
-                      {menuAberto ? (
-                        isOpen ? (
-                          <ChevronDown className="h-4 w-4" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4" />
-                        )
-                      ) : null}
-                    </button>
-
-                    {menuAberto && isOpen ? (
-                      <div className="ml-6 mt-1 space-y-1 border-l border-slate-200 pl-3">
-                        {item.subitems.map((subitem) => {
-                          if ("children" in subitem) {
-                            const filhosVisiveis = subitem.children.filter(
-                              (child) => podeVer(perfil, child.perfis),
-                            );
-
-                            if (filhosVisiveis.length === 0) return null;
-
-                            const grupoAtivo = filhosVisiveis.some(
-                              (child) =>
-                                hrefSubitemAtivo(
-                                  pathname,
-                                  search,
-                                  child.href,
-                                ) ||
-                                Boolean(activeTab && activeTab === child.tab),
-                            );
-
-                            const grupoAberto = openSubmenus.includes(
-                              subitem.tab,
-                            );
+                      {itensSecao.map((item) => {
+                        const Icon = item.icon;
+                        const itemAtivoDireto =
+                          item.subitems.length === 0 &&
+                          hrefAtivo(pathname, item.href);
+                        const isActive =
+                          item.subitems.some((sub) => {
+                            if (sub.children?.length) {
+                              return sub.children.some(
+                                (child) =>
+                                  hrefSubitemAtivo(
+                                    pathname,
+                                    search,
+                                    child.href,
+                                  ) ||
+                                  Boolean(activeTab && activeTab === child.tab),
+                              );
+                            }
 
                             return (
-                              <div key={subitem.tab} className="py-1">
-                                <button
-                                  type="button"
-                                  onClick={() => toggleSubmenu(subitem.tab)}
-                                  className={`mb-1 flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-[11px] font-black uppercase tracking-[0.16em] transition ${
-                                    grupoAtivo
-                                      ? "bg-blue-50 text-blue-700"
-                                      : "text-slate-400 hover:bg-slate-50 hover:text-slate-700"
-                                  }`}
-                                >
-                                  <span>{subitem.label}</span>
-                                  {grupoAberto ? (
-                                    <ChevronDown className="h-3.5 w-3.5" />
-                                  ) : (
-                                    <ChevronRight className="h-3.5 w-3.5" />
-                                  )}
-                                </button>
+                              hrefSubitemAtivo(pathname, search, sub.href) ||
+                              Boolean(activeTab && activeTab === sub.tab)
+                            );
+                          }) ||
+                          activeTab === item.tab ||
+                          itemAtivoDireto;
+                        const isOpen = openMenus.includes(item.label);
+                        const temSubitens = item.subitems.length > 0;
 
-                                {grupoAberto ? (
-                                  <div className="space-y-1 pl-2">
-                                    {filhosVisiveis.map((child) => {
-                                      const childAtivo =
+                        return (
+                          <div key={item.label}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!temSubitens) {
+                                  router.push(item.href);
+                                  fecharMenuMobile();
+                                  return;
+                                }
+                                toggleMenu(item.label);
+                              }}
+                              className={`group flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-sm font-semibold transition-all duration-200 ${
+                                isActive
+                                  ? "bg-blue-50 text-blue-700 shadow-[inset_0_0_0_1px_rgba(37,99,235,0.08)]"
+                                  : "text-slate-600 hover:bg-slate-100/90 hover:text-slate-950"
+                              } ${
+                                menuVisualAberto
+                                  ? "justify-start"
+                                  : "justify-center"
+                              }`}
+                              title={item.label}
+                            >
+                              <span
+                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition ${
+                                  isActive
+                                    ? "bg-blue-600 text-white shadow-sm shadow-blue-500/25"
+                                    : "bg-transparent text-slate-500 group-hover:bg-white group-hover:text-slate-900 group-hover:shadow-sm"
+                                }`}
+                              >
+                                <Icon className="h-[18px] w-[18px]" />
+                              </span>
+
+                              {menuVisualAberto ? (
+                                <span className="flex-1 text-left">
+                                  {item.label}
+                                </span>
+                              ) : null}
+
+                              {menuVisualAberto && temSubitens ? (
+                                isOpen ? (
+                                  <ChevronDown className="h-4 w-4 text-slate-400" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4 text-slate-400" />
+                                )
+                              ) : null}
+                            </button>
+
+                            {menuVisualAberto && temSubitens && isOpen ? (
+                              <div className="ml-7 mt-1.5 space-y-1 border-l border-slate-200/80 pl-3">
+                                {item.subitems.map((subitem) => {
+                                  if (subitem.children?.length) {
+                                    const filhosVisiveis =
+                                      subitem.children.filter((child) =>
+                                        podeVer(perfil, child.perfis),
+                                      );
+
+                                    if (filhosVisiveis.length === 0)
+                                      return null;
+
+                                    const grupoAtivo = filhosVisiveis.some(
+                                      (child) =>
                                         hrefSubitemAtivo(
                                           pathname,
                                           search,
@@ -921,134 +958,160 @@ export function DashboardShell({
                                         ) ||
                                         Boolean(
                                           activeTab && activeTab === child.tab,
-                                        );
+                                        ),
+                                    );
+                                    const grupoAberto = openSubmenus.includes(
+                                      subitem.tab,
+                                    );
 
-                                      return (
-                                        <Link
-                                          key={`${child.tab}-${child.href}`}
-                                          href={child.href}
-                                          className={`block w-full rounded-lg px-3 py-2 text-left text-xs font-semibold transition ${
-                                            childAtivo
+                                    return (
+                                      <div key={subitem.tab} className="py-0.5">
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            toggleSubmenu(subitem.tab)
+                                          }
+                                          className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-[11px] font-bold transition ${
+                                            grupoAtivo
                                               ? "bg-blue-50 text-blue-700"
-                                              : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                                              : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
                                           }`}
                                         >
-                                          {child.label}
-                                        </Link>
-                                      );
-                                    })}
-                                  </div>
-                                ) : null}
+                                          <span>{subitem.label}</span>
+                                          {grupoAberto ? (
+                                            <ChevronDown className="h-3.5 w-3.5" />
+                                          ) : (
+                                            <ChevronRight className="h-3.5 w-3.5" />
+                                          )}
+                                        </button>
+
+                                        {grupoAberto ? (
+                                          <div className="mt-1 space-y-1 pl-2">
+                                            {filhosVisiveis.map((child) => {
+                                              const childAtivo =
+                                                hrefSubitemAtivo(
+                                                  pathname,
+                                                  search,
+                                                  child.href,
+                                                ) ||
+                                                Boolean(
+                                                  activeTab &&
+                                                  activeTab === child.tab,
+                                                );
+
+                                              return (
+                                                <Link
+                                                  key={`${child.tab}-${child.href}`}
+                                                  href={child.href}
+                                                  onClick={fecharMenuMobile}
+                                                  className={`block rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                                                    childAtivo
+                                                      ? "bg-blue-50 text-blue-700"
+                                                      : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                                                  }`}
+                                                >
+                                                  {child.label}
+                                                </Link>
+                                              );
+                                            })}
+                                          </div>
+                                        ) : null}
+                                      </div>
+                                    );
+                                  }
+
+                                  const childAtivo =
+                                    hrefSubitemAtivo(
+                                      pathname,
+                                      search,
+                                      subitem.href,
+                                    ) ||
+                                    Boolean(
+                                      activeTab && activeTab === subitem.tab,
+                                    );
+
+                                  return (
+                                    <Link
+                                      key={`${subitem.tab}-${subitem.href}`}
+                                      href={subitem.href}
+                                      onClick={fecharMenuMobile}
+                                      className={`block rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                                        childAtivo
+                                          ? "bg-blue-50 text-blue-700"
+                                          : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                                      }`}
+                                    >
+                                      {subitem.label}
+                                    </Link>
+                                  );
+                                })}
                               </div>
-                            );
-                          }
-
-                          const childAtivo =
-                            hrefSubitemAtivo(pathname, search, subitem.href) ||
-                            Boolean(activeTab && activeTab === subitem.tab);
-
-                          return (
-                            <Link
-                              key={`${subitem.tab}-${subitem.href}`}
-                              href={subitem.href}
-                              className={`block w-full rounded-lg px-3 py-2 text-left text-xs font-semibold transition ${
-                                childAtivo
-                                  ? "bg-blue-50 text-blue-700"
-                                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                              }`}
-                            >
-                              {subitem.label}
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              })}
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                },
+              )}
             </div>
           </nav>
 
-          <div className="border-t border-slate-100 p-3">
+          <div className="shrink-0 border-t border-slate-200/70 p-3">
             <button
               type="button"
               onClick={sair}
-              className={`flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950 ${
-                menuAberto ? "justify-start" : "justify-center"
+              className={`flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-slate-500 transition hover:bg-red-50 hover:text-red-700 ${
+                menuVisualAberto ? "justify-start" : "justify-center"
               }`}
               title="Sair"
             >
-              <LogOut className="h-5 w-5" />
-              {menuAberto ? <span>Sair</span> : null}
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl">
+                <LogOut className="h-[18px] w-[18px]" />
+              </span>
+              {menuVisualAberto ? <span>Sair</span> : null}
             </button>
           </div>
         </div>
       </aside>
 
       <div
-        onClick={() => {
-          fecharMenu();
-          setDropdownAberto(null);
-        }}
-        className={`min-h-screen transition-all duration-300 ${menuAberto ? "lg:pl-[250px]" : "lg:pl-[76px]"}`}
+        onClick={() => setDropdownAberto(null)}
+        className={`min-h-screen transition-[padding] duration-300 ${
+          menuAberto ? "lg:pl-[264px]" : "lg:pl-[84px]"
+        }`}
       >
-        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
-          <div className="flex h-[76px] items-center gap-4 px-4 sm:px-6">
+        <header className="flow-ios-topbar sticky top-0 z-20 border-b border-white/80 bg-white/78 backdrop-blur-2xl">
+          <div className="flex h-[70px] items-center gap-3 px-4 sm:px-6">
             <button
               type="button"
               onClick={(event) => {
                 event.stopPropagation();
-                setMenuAberto(true);
+                setMenuMobileAberto(true);
               }}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 lg:hidden"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200/80 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 lg:hidden"
+              aria-label="Abrir menu"
             >
               <Menu className="h-5 w-5" />
             </button>
 
-            {isPaginaLeads ? (
-              <div className="hidden min-w-0 flex-1 items-center justify-center lg:flex">
-                <label className="relative w-full max-w-[520px]">
-                  <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    value={buscaGlobal}
-                    onChange={(event) => setBuscaGlobal(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        executarBusca();
-                      }
-                    }}
-                    placeholder="Buscar lead por nome, telefone, cliente ou veículo..."
-                    className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
-                  />
-                </label>
-              </div>
-            ) : (
-              <div className="hidden min-w-0 flex-1 lg:block" />
-            )}
-
-            {podeVer(perfil, [
-              "adm",
-              "admin",
-              "suporte",
-              "gerente",
-              "supervisor",
-            ]) ? (
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setDropdownAberto((atual) =>
-                    atual === "usuarios" ? null : "usuarios",
-                  );
-                }}
-                className="hidden h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 md:flex"
-              >
-                <UserCog className="h-4 w-4" />
-                Usuários
-                <ChevronDown className="h-4 w-4 text-slate-400" />
-              </button>
-            ) : null}
+            <div className="hidden min-w-0 flex-1 items-center lg:flex">
+              <label className="relative w-full max-w-[580px]">
+                <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  value={buscaGlobal}
+                  onChange={(event) => setBuscaGlobal(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      executarBusca();
+                    }
+                  }}
+                  placeholder="Buscar cliente, telefone ou veículo..."
+                  className="h-11 w-full rounded-2xl border border-slate-200/80 bg-slate-100/70 pl-11 pr-4 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 hover:bg-slate-100 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100/70"
+                />
+              </label>
+            </div>
 
             <button
               id="flow-notification-bell"
@@ -1059,7 +1122,7 @@ export function DashboardShell({
                   atual === "notificacoes" ? null : "notificacoes",
                 );
               }}
-              className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
+              className="relative flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200/80 bg-white text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-md"
             >
               <Bell className="h-5 w-5" />
               {totalNotificacoes > 0 ? (
@@ -1077,9 +1140,9 @@ export function DashboardShell({
                   atual === "avatar" ? null : "avatar",
                 );
               }}
-              className="flex items-center gap-3 rounded-2xl px-2 py-1 transition hover:bg-slate-100"
+              className="flex items-center gap-3 rounded-2xl px-1.5 py-1 transition hover:bg-slate-100/80"
             >
-              <div className="relative flex h-11 w-11 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">
+              <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-slate-800 to-slate-950 text-sm font-bold text-white shadow-sm">
                 {usuario.nome.slice(0, 1).toUpperCase()}
                 <span
                   className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white ${statusDotClass(statusOperacional)}`}
@@ -1101,16 +1164,14 @@ export function DashboardShell({
 
         {dropdownAberto ? (
           <div
-            className="fixed right-6 top-[72px] z-50 w-[340px] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl"
+            className="fixed right-4 top-[76px] z-50 w-[340px] max-w-[calc(100vw-2rem)] rounded-[24px] border border-white/80 bg-white/92 p-4 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur-2xl sm:right-6"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-950">
                 {dropdownAberto === "notificacoes"
                   ? "Notificações"
-                  : dropdownAberto === "usuarios"
-                    ? "Usuários"
-                    : "Minha conta"}
+                  : "Minha conta"}
               </h3>
               <button
                 type="button"
@@ -1142,32 +1203,6 @@ export function DashboardShell({
                   className="rounded-xl border border-slate-100 px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:border-blue-200 hover:bg-blue-50"
                 >
                   Abrir minhas tarefas
-                </Link>
-              </div>
-            ) : null}
-
-            {dropdownAberto === "usuarios" ? (
-              <div className="grid gap-2">
-                <Link
-                  href="/dashboard/usuarios"
-                  onClick={() => setDropdownAberto(null)}
-                  className="rounded-xl border border-slate-100 px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:border-blue-200 hover:bg-blue-50"
-                >
-                  Todos os usuários
-                </Link>
-                <Link
-                  href="/dashboard/usuarios/permissoes"
-                  onClick={() => setDropdownAberto(null)}
-                  className="rounded-xl border border-slate-100 px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:border-blue-200 hover:bg-blue-50"
-                >
-                  Perfis e acessos
-                </Link>
-                <Link
-                  href="/dashboard/usuarios?aba=status"
-                  onClick={() => setDropdownAberto(null)}
-                  className="rounded-xl border border-slate-100 px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:border-blue-200 hover:bg-blue-50"
-                >
-                  Status da equipe
                 </Link>
               </div>
             ) : null}
