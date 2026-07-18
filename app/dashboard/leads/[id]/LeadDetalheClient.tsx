@@ -1,25 +1,21 @@
 "use client";
 
-import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
-  ArrowLeft,
   CalendarClock,
   CarFront,
   CheckCircle2,
   Clock3,
   FileText,
-  Flame,
   Loader2,
   Mail,
-  MessageCircle,
   Phone,
   Save,
   ShieldCheck,
-  Tag,
   UserRound,
   UserCheck,
 } from "lucide-react";
+import { LeadCommandCenter } from "@/components/leads/LeadCommandCenter";
 
 type Usuario = {
   id: string;
@@ -216,38 +212,6 @@ function nomesVendedorLead(lead: Lead) {
     .map((valor) => String(valor));
 }
 
-function corTemperatura(valor: string) {
-  const temperatura = valor.toLowerCase();
-
-  if (temperatura.includes("quente")) {
-    return "border-red-100 bg-red-50 text-red-700";
-  }
-
-  if (temperatura.includes("frio")) {
-    return "border-sky-100 bg-sky-50 text-sky-700";
-  }
-
-  return "border-amber-100 bg-amber-50 text-amber-700";
-}
-
-function corEtapa(valor: string) {
-  const etapa = valor.toLowerCase();
-
-  if (etapa.includes("venda") || etapa.includes("ganho")) {
-    return "border-emerald-100 bg-emerald-50 text-emerald-700";
-  }
-
-  if (etapa.includes("agend")) {
-    return "border-blue-100 bg-blue-50 text-blue-700";
-  }
-
-  if (etapa.includes("arquiv")) {
-    return "border-slate-200 bg-slate-100 text-slate-600";
-  }
-
-  return "border-violet-100 bg-violet-50 text-violet-700";
-}
-
 function formatarDataInput(valor: string | null) {
   if (!valor) return "";
   const data = new Date(valor);
@@ -378,9 +342,6 @@ export function LeadDetalheClient({ leadInicial, interacoesIniciais, usuario, us
   }, [filtroHistorico, interacoes]);
 
   const ultimaInteracao = interacoes[0] || null;
-  const totalLigacoes = interacoes.filter((interacao) => interacao.canal === "telefone" || interacao.canal === "3cx").length;
-  const totalWhatsApp = interacoes.filter((interacao) => interacao.canal === "whatsapp").length;
-  const totalVisitas = interacoes.filter((interacao) => interacao.tipo === "visita" || interacao.resultado === "visitou_loja").length;
   const proximaAcaoAtrasada = isAtrasado(lead.data_proxima_acao);
   const situacaoAtual = situacaoLead(lead, interacoes.length);
   const sugestaoAtual = sugestaoLead(lead, interacoes.length);
@@ -610,141 +571,52 @@ export function LeadDetalheClient({ leadInicial, interacoesIniciais, usuario, us
     }));
   }
 
+  function rolarParaSecao(id: string) {
+    window.requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  }
+
+  function iniciarRegistro(canal: "telefone" | "whatsapp" = "telefone") {
+    atualizar("canal", canal);
+    rolarParaSecao("lead-registro-atendimento");
+  }
+
+  function iniciarAgendamento() {
+    setTipoAgenda("visita");
+    rolarParaSecao("lead-agendamento");
+  }
+
   return (
-    <main className="min-h-screen bg-slate-100 px-5 py-5 text-slate-950 lg:px-8 lg:py-7">
+    <main className="flow-lead-page min-h-screen px-4 py-4 text-slate-950 sm:px-5 sm:py-5 lg:px-8 lg:py-7">
       <div className="mx-auto max-w-[1480px]">
-        <div className="mb-5 rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 px-5 py-4">
-            <Link
-              href="/dashboard/leads"
-              className="inline-flex items-center gap-2 text-sm font-bold text-blue-700 transition hover:text-blue-800"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Voltar para leads
-            </Link>
-
-            <div className="mt-4 flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-500">
-                  Lead/Oportunidade
-                </p>
-                <h1 className="mt-1 text-3xl font-black tracking-[-0.04em] text-slate-950">
-                  {lead.nome}
-                </h1>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <span className={`rounded-full border px-3 py-1 text-xs font-black ${corTemperatura(lead.temperatura)}`}>
-                    <Flame className="mr-1 inline h-3.5 w-3.5" />
-                    {normalizarTexto(lead.temperatura)}
-                  </span>
-                  <span className={`rounded-full border px-3 py-1 text-xs font-black ${corEtapa(lead.etapa)}`}>
-                    {normalizarTexto(lead.etapa)}
-                  </span>
-                  {lead.venda_pendente_validacao ? (
-                    <span className="rounded-full border border-orange-100 bg-orange-50 px-3 py-1 text-xs font-black text-orange-700">
-                      Venda pendente de validação
-                    </span>
-                  ) : null}
-                  {lead.venda_validada ? (
-                    <span className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">
-                      Venda validada
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <a
-                  href={`tel:${lead.telefone}`}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-sm font-black text-white shadow-lg shadow-blue-700/20 transition hover:bg-blue-800"
-                >
-                  <Phone className="h-4 w-4" />
-                  Ligar
-                </a>
-
-                {whatsapp ? (
-                  <a
-                    href={`https://wa.me/${whatsapp}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-5 text-sm font-black text-emerald-700 transition hover:bg-emerald-100"
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                    WhatsApp
-                  </a>
-                ) : null}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-3 p-5 md:grid-cols-3 xl:grid-cols-6">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-400">Em atividade há</p>
-              <p className="mt-2 text-2xl font-black text-slate-900">{diasEmAtividade(lead.criado_em)}</p>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-400">Etapa atual</p>
-              <p className="mt-2 text-2xl font-black text-slate-900">{normalizarTexto(lead.etapa)}</p>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-400">Última atualização</p>
-              <p className="mt-2 text-2xl font-black text-slate-900">{formatarDataCurta(lead.atualizado_em)}</p>
-            </div>
-
-            <div className={`rounded-xl border p-4 ${proximaAcaoAtrasada ? "border-red-200 bg-red-50" : "border-slate-200 bg-slate-50"}`}>
-              <p className={`text-xs font-black uppercase tracking-wide ${proximaAcaoAtrasada ? "text-red-500" : "text-slate-400"}`}>Próxima ação</p>
-              <p className={`mt-2 text-lg font-black ${proximaAcaoAtrasada ? "text-red-700" : "text-slate-900"}`}>
-                {lead.data_proxima_acao ? formatarDataCurta(lead.data_proxima_acao) : "Sem registro"}
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-400">Interações</p>
-              <p className="mt-2 text-2xl font-black text-slate-900">{interacoes.length}</p>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-400">Último resultado</p>
-              <p className="mt-2 text-sm font-black text-slate-900">{ultimaInteracao ? labelResultado(ultimaInteracao.resultado) : "Sem histórico"}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mb-5 grid gap-4 xl:grid-cols-4">
-          <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-700">Situação atual</p>
-            <p className="mt-2 text-sm font-bold leading-6 text-slate-800">{situacaoAtual}</p>
-          </div>
-
-          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Próxima melhor ação</p>
-            <p className="mt-2 text-sm font-bold leading-6 text-slate-800">{sugestaoAtual}</p>
-          </div>
-
-          <div className={`rounded-2xl border p-4 ${riscoAtual === "Sem alerta crítico" ? "border-slate-200 bg-white" : "border-red-100 bg-red-50"}`}>
-            <p className={`text-xs font-black uppercase tracking-[0.18em] ${riscoAtual === "Sem alerta crítico" ? "text-slate-500" : "text-red-700"}`}>Risco</p>
-            <p className="mt-2 text-sm font-bold leading-6 text-slate-800">{riscoAtual}</p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Resumo de canais</p>
-            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-xl bg-slate-50 p-2">
-                <p className="text-lg font-black text-slate-950">{totalLigacoes}</p>
-                <p className="text-[10px] font-black uppercase text-slate-400">Ligações</p>
-              </div>
-              <div className="rounded-xl bg-slate-50 p-2">
-                <p className="text-lg font-black text-slate-950">{totalWhatsApp}</p>
-                <p className="text-[10px] font-black uppercase text-slate-400">WhatsApp</p>
-              </div>
-              <div className="rounded-xl bg-slate-50 p-2">
-                <p className="text-lg font-black text-slate-950">{totalVisitas}</p>
-                <p className="text-[10px] font-black uppercase text-slate-400">Visitas</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <LeadCommandCenter
+          nome={lead.nome}
+          telefone={lead.telefone}
+          email={lead.email}
+          veiculo={lead.veiculo_interesse}
+          temperatura={lead.temperatura}
+          etapa={lead.etapa}
+          whatsapp={whatsapp}
+          vendedor={lead.vendedor_nome}
+          emAtividade={diasEmAtividade(lead.criado_em)}
+          proximaAcao={lead.data_proxima_acao ? formatarDataCurta(lead.data_proxima_acao) : "Sem registro"}
+          proximaAcaoAtrasada={proximaAcaoAtrasada}
+          totalInteracoes={interacoes.length}
+          ultimoResultado={ultimaInteracao ? labelResultado(ultimaInteracao.resultado) : "Sem histórico"}
+          situacao={situacaoAtual}
+          sugestao={sugestaoAtual}
+          risco={riscoAtual}
+          vendaPendente={lead.venda_pendente_validacao}
+          vendaValidada={lead.venda_validada}
+          onIniciarLigacao={() => iniciarRegistro("telefone")}
+          onIniciarWhatsapp={() => iniciarRegistro("whatsapp")}
+          onRegistrar={() => iniciarRegistro(form.canal === "whatsapp" ? "whatsapp" : "telefone")}
+          onAgendar={iniciarAgendamento}
+        />
 
         <section className="mb-5 rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col justify-between gap-4 border-b border-slate-100 px-5 py-4 lg:flex-row lg:items-center">
@@ -842,7 +714,7 @@ export function LeadDetalheClient({ leadInicial, interacoesIniciais, usuario, us
 
         </section>
 
-        <section className="mb-5 overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-sm">
+        <section id="lead-agendamento" className="mb-5 scroll-mt-24 overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-sm">
           <div className="flex flex-col justify-between gap-4 border-b border-blue-100 bg-blue-50 px-5 py-4 lg:flex-row lg:items-center">
             <div>
               <h2 className="flex items-center gap-2 text-base font-black text-slate-950">
@@ -1160,9 +1032,9 @@ export function LeadDetalheClient({ leadInicial, interacoesIniciais, usuario, us
           </section>
 
           <section className="grid gap-5">
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div id="lead-registro-atendimento" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-100 px-5 py-4">
-                <h2 className="text-base font-black text-slate-950">Ação rápida do atendente</h2>
+                <h2 className="text-base font-black text-slate-950">Registrar atendimento</h2>
                 <p className="mt-1 text-sm font-semibold text-slate-500">
                   Registre o atendimento. A temperatura será calculada automaticamente pelo sistema.
                 </p>
