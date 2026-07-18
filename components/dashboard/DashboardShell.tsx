@@ -19,7 +19,6 @@ import {
   PhoneCall,
   Search,
   Settings,
-  Store,
   UserCog,
   Users,
   WalletCards,
@@ -225,30 +224,6 @@ const menuItems: MenuItem[] = [
         label: "Vendas pendentes",
         tab: "vendas-pendentes",
         href: "/dashboard/vendas/pendentes",
-      },
-    ],
-  },
-  {
-    label: "Campanhas",
-    icon: Store,
-    tab: "campanhas-ativas",
-    href: "/dashboard/campanhas",
-    subitems: [
-      {
-        label: "Campanhas ativas",
-        tab: "campanhas-ativas",
-        href: "/dashboard/campanhas",
-      },
-      {
-        label: "Criar campanha",
-        tab: "criar-campanha",
-        href: "/dashboard/campanhas?acao=nova",
-        perfis: ["adm", "admin", "suporte", "gerente", "supervisor"],
-      },
-      {
-        label: "Mensagens",
-        tab: "mensagens-campanha",
-        href: "/dashboard/campanhas?aba=mensagens",
       },
     ],
   },
