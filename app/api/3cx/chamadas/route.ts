@@ -57,7 +57,7 @@ function supabaseAdmin() {
 }
 
 async function buscarIntegracao3CX(
-  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  supabase: ReturnType<typeof supabaseAdmin>,
 ) {
   const { data, error } = await supabase
     .from("integracoes_configuracoes")
@@ -281,7 +281,7 @@ function pegarTelefoneCliente(body: Payload3CX) {
 }
 
 async function buscarUsuarioPorPayload(
-  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  supabase: ReturnType<typeof supabaseAdmin>,
   body: Payload3CX,
 ) {
   const usuarioId = texto(body.usuario_id);
@@ -390,7 +390,7 @@ async function salvarEventoTelefonia({
   sucesso,
   erro,
 }: {
-  supabase: ReturnType<typeof createSupabaseAdminClient>;
+  supabase: ReturnType<typeof supabaseAdmin>;
   chamadaId: string | null;
   body: Payload3CX;
   usuario: Registro | null;

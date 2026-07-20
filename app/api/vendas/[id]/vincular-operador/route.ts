@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { registrarAuditoria } from "@/lib/sistema/auditoria";
 import { createClient } from "@/lib/supabase/server";
 
+type VendaRegistro = Record<string, any>;
+
 function texto(valor: unknown) {
   return String(valor || "").trim();
 }
@@ -92,7 +94,7 @@ async function buscarVendaAlvo(
     .maybeSingle();
 
   if (erroPorId) throw new Error(erroPorId.message);
-  if (porId) return porId;
+  if (porId) return porId as VendaRegistro;
 
   if (!placa) return null;
 
@@ -106,7 +108,7 @@ async function buscarVendaAlvo(
 
   if (erroPorPlaca) throw new Error(erroPorPlaca.message);
 
-  return porPlaca;
+  return (porPlaca || null) as VendaRegistro | null;
 }
 
 export async function PATCH(
@@ -228,7 +230,7 @@ export async function PATCH(
       payload.operador_vinculado_em = agora;
     }
 
-    const { data, error } = await supabase
+    const { data: dataRaw, error } = await supabase
       .from("vendas_acompanhamento")
       .update(payload)
       .eq("id", vendaAtual.id)
@@ -236,6 +238,8 @@ export async function PATCH(
       .single();
 
     if (error) throw new Error(error.message);
+
+    const data = (dataRaw || {}) as VendaRegistro;
 
     await registrarAuditoria({
       modulo: "vendas_resgate",
@@ -326,7 +330,7 @@ export async function DELETE(
       );
     }
 
-    const { data, error } = await supabase
+    const { data: dataRaw, error } = await supabase
       .from("vendas_acompanhamento")
       .update({
         operador_id: null,
@@ -353,6 +357,8 @@ export async function DELETE(
       .single();
 
     if (error) throw new Error(error.message);
+
+    const data = (dataRaw || {}) as VendaRegistro;
 
     await registrarAuditoria({
       modulo: "vendas_resgate",

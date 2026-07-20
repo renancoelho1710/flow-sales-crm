@@ -117,19 +117,19 @@ export function VendasDashboardResumo({
   );
 
   return (
-    <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="apple-card p-5">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <h2 className="text-2xl font-black tracking-[-0.04em] text-slate-950">
+          <h2 className="apple-section-title text-[1.9rem]">
             {titulo}
           </h2>
-          <p className="mt-1 text-sm font-semibold text-slate-500">
+          <p className="apple-section-copy">
             {subtitulo}
           </p>
         </div>
 
         {carregando ? (
-          <div className="flex items-center gap-2 rounded-2xl bg-blue-50 px-4 py-2 text-sm font-black text-blue-700">
+          <div className="apple-pill bg-blue-50 text-blue-700">
             <Loader2 className="h-4 w-4 animate-spin" />
             Atualizando resumo
           </div>
@@ -137,12 +137,12 @@ export function VendasDashboardResumo({
       </div>
 
       {erro ? (
-        <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+        <div className="mt-4 apple-soft-card apple-tint-red px-4 py-3 text-sm font-bold text-red-700">
           {erro}
         </div>
       ) : null}
 
-      <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-5 apple-kpi-grid">
         <ResumoCard
           titulo="Total acompanhamento"
           valor={resumo.total}
@@ -169,7 +169,7 @@ export function VendasDashboardResumo({
         />
       </div>
 
-      <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-4 apple-kpi-grid">
         <ResumoCard
           titulo="Confirmadas"
           valor={resumo.confirmadas}
@@ -200,7 +200,7 @@ export function VendasDashboardResumo({
         />
       </div>
 
-      <details className="mt-5 rounded-[22px] border border-slate-200 bg-slate-50 px-5 py-4">
+      <details className="mt-5 apple-soft-card apple-tint-slate px-5 py-4">
         <summary className="cursor-pointer select-none text-sm font-black text-slate-800">
           Ver distribuição por loja, vendedor e operador
         </summary>
@@ -241,23 +241,15 @@ function ResumoCard({
   classe?: string;
 }) {
   return (
-    <article className={`rounded-[24px] border p-5 ${classe}`}>
-      <div className="flex items-start justify-between gap-3">
+    <article className={`apple-stat-card ${classe}`}>
+      <div className="apple-stat-head">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">
-            {titulo}
-          </p>
-          <strong className="mt-3 block text-3xl font-black tracking-[-0.05em] text-slate-950">
-            {valor}
-          </strong>
-          <span className="mt-1 block text-xs font-bold text-slate-500">
-            {detalhe}
-          </span>
+          <p className="apple-stat-title">{titulo}</p>
+          <strong className="apple-stat-value mt-3 block">{valor}</strong>
+          <span className="apple-stat-note mt-1 block">{detalhe}</span>
         </div>
 
-        <div className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-slate-700 shadow-sm">
-          {icon}
-        </div>
+        <div className="apple-stat-icon text-slate-700">{icon}</div>
       </div>
     </article>
   );
@@ -284,7 +276,7 @@ function RankingCard({
 
   if (isOperador && linhasValidas.length === 0) {
     return (
-      <article className="rounded-[26px] border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-6 shadow-sm">
+      <article className="apple-card apple-tint-orange p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 rounded-2xl bg-amber-100 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-amber-800">
@@ -305,7 +297,7 @@ function RankingCard({
           </div>
         </div>
 
-        <div className="mt-5 rounded-2xl border border-amber-200 bg-white px-4 py-3">
+        <div className="mt-5 apple-soft-card bg-white/80 px-4 py-3">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-700">
             Próxima ação
           </p>
@@ -321,7 +313,7 @@ function RankingCard({
   const lista = linhasValidas.length > 0 ? linhasValidas : linhas;
 
   return (
-    <article className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm">
+    <article className="apple-card p-5">
       <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
         <div className="flex items-center gap-2">
           <div className="grid h-9 w-9 place-items-center rounded-2xl bg-blue-50 text-blue-700">
@@ -344,7 +336,7 @@ function RankingCard({
 
       <div className="mt-4 space-y-2">
         {lista.length === 0 ? (
-          <p className="rounded-2xl bg-slate-50 px-4 py-4 text-sm font-bold text-slate-400">
+          <p className="apple-soft-card apple-tint-slate px-4 py-4 text-sm font-bold text-slate-400">
             Sem dados para exibir.
           </p>
         ) : (
@@ -354,7 +346,7 @@ function RankingCard({
             return (
               <div
                 key={linha.nome}
-                className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3"
+                className="apple-soft-card apple-tint-slate px-4 py-3"
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-3">

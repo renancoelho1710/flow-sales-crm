@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { registrarAuditoria } from "@/lib/sistema/auditoria";
 import { createClient } from "@/lib/supabase/server";
 
+type VendaRegistro = Record<string, any>;
+
 function texto(valor: unknown) {
   return String(valor || "").trim();
 }
@@ -82,7 +84,7 @@ async function buscarVendaAntes(
 
   if (error) throw new Error(error.message);
 
-  return data;
+  return (data || null) as VendaRegistro | null;
 }
 
 export async function PATCH(
@@ -176,7 +178,7 @@ export async function PATCH(
 
       const agora = new Date().toISOString();
 
-      const { data: vendaAtualizada, error: erroUpdate } = await supabase
+      const { data: vendaAtualizadaRaw, error: erroUpdate } = await supabase
         .from("vendas_acompanhamento")
         .update({
           agendamento_id: agendamento.id,
@@ -195,6 +197,8 @@ export async function PATCH(
         .maybeSingle();
 
       if (erroUpdate) throw new Error(erroUpdate.message);
+
+      const vendaAtualizada = (vendaAtualizadaRaw || null) as VendaRegistro | null;
 
       await registrarAuditoria({
         modulo: "vendas_resgate",
@@ -227,7 +231,7 @@ export async function PATCH(
       const vendaAntes = await buscarVendaAntes(supabase, id);
       const agora = new Date().toISOString();
 
-      const { data: vendaAtualizada, error } = await supabase
+      const { data: vendaAtualizadaRaw, error } = await supabase
         .from("vendas_acompanhamento")
         .update({
           validacao_status: "validado",
@@ -243,6 +247,8 @@ export async function PATCH(
         .maybeSingle();
 
       if (error) throw new Error(error.message);
+
+      const vendaAtualizada = (vendaAtualizadaRaw || null) as VendaRegistro | null;
 
       if (vendaAtualizada?.lead_id) {
         await supabase
@@ -306,7 +312,7 @@ export async function PATCH(
       const vendaAntes = await buscarVendaAntes(supabase, id);
       const agora = new Date().toISOString();
 
-      const { data: vendaAtualizada, error } = await supabase
+      const { data: vendaAtualizadaRaw, error } = await supabase
         .from("vendas_acompanhamento")
         .update({
           validacao_status: "recusado",
@@ -322,6 +328,8 @@ export async function PATCH(
         .maybeSingle();
 
       if (error) throw new Error(error.message);
+
+      const vendaAtualizada = (vendaAtualizadaRaw || null) as VendaRegistro | null;
 
       if (vendaAtualizada?.lead_id) {
         await supabase

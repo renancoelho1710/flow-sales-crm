@@ -591,7 +591,7 @@ export function LeadDetalheClient({ leadInicial, interacoesIniciais, usuario, us
   }
 
   return (
-    <main className="flow-lead-page min-h-screen px-4 py-4 text-slate-950 sm:px-5 sm:py-5 lg:px-8 lg:py-7">
+    <main className="flow-premium-page flow-lead-page min-h-screen px-4 py-4 text-slate-950 sm:px-5 sm:py-5 lg:px-8 lg:py-7">
       <div className="mx-auto max-w-[1480px]">
         <LeadCommandCenter
           nome={lead.nome}

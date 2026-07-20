@@ -1,21 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { AtendimentoHeader } from "@/components/atendimento/AtendimentoHeader";
 import { useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
-  CalendarClock,
   CheckCircle2,
-  Clock3,
-  Filter,
   Flame,
   Gauge,
   Loader2,
   MessageCircle,
   Phone,
   Search,
-  Settings,
   ShieldCheck,
   TrendingUp,
   Users,
@@ -285,29 +282,44 @@ function telefoneWhatsapp(lead: Lead) {
   return `55${digits}`;
 }
 
-function KpiCard({ titulo, valor, detalhe, icon: Icon, tom }: { titulo: string; valor: number | string; detalhe: string; icon: any; tom: "blue" | "red" | "orange" | "emerald" | "purple" | "slate" }) {
+function KpiCard({
+  titulo,
+  valor,
+  detalhe,
+  icon: Icon,
+  tom,
+  onClick,
+}: {
+  titulo: string;
+  valor: number | string;
+  detalhe: string;
+  icon: any;
+  tom: "blue" | "red" | "orange" | "emerald" | "purple" | "slate";
+  onClick: () => void;
+}) {
   const estilos = {
-    blue: "border-blue-100 bg-blue-50 text-blue-700",
-    red: "border-red-100 bg-red-50 text-red-700",
-    orange: "border-orange-100 bg-orange-50 text-orange-700",
-    emerald: "border-emerald-100 bg-emerald-50 text-emerald-700",
-    purple: "border-purple-100 bg-purple-50 text-purple-700",
-    slate: "border-slate-200 bg-slate-50 text-slate-700",
+    blue: "bg-blue-50 text-blue-600",
+    red: "bg-red-50 text-red-600",
+    orange: "bg-orange-50 text-orange-600",
+    emerald: "bg-emerald-50 text-emerald-600",
+    purple: "bg-violet-50 text-violet-600",
+    slate: "bg-slate-100 text-slate-600",
   }[tom];
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-black uppercase tracking-wide text-slate-400">{titulo}</p>
-          <p className="mt-2 text-4xl font-black tracking-[-0.05em] text-slate-950">{valor}</p>
-          <p className="mt-1 text-xs font-bold text-slate-500">{detalhe}</p>
-        </div>
-        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border ${estilos}`}>
-          <Icon className="h-5 w-5" />
+    <button type="button" onClick={onClick} className="flow-ios-kpi flow-ios-kpi-button text-left">
+      <div className="min-w-0">
+        <p className="flow-ios-eyebrow">{titulo}</p>
+        <p className="mt-2 text-[1.85rem] font-semibold tracking-[-0.055em] text-slate-950">{valor}</p>
+        <p className="mt-1 truncate text-xs font-medium text-slate-500">{detalhe}</p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <span className="flow-ios-kpi-open">Ver</span>
+        <div className={`flow-ios-kpi-icon ${estilos}`}>
+          <Icon className="h-[18px] w-[18px]" strokeWidth={1.9} />
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -345,6 +357,12 @@ export function KanbanClient({
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [leadSelecionado, setLeadSelecionado] = useState<Lead | null>(null);
+  const [painelResumo, setPainelResumo] = useState<{
+    titulo: string;
+    subtitulo: string;
+    leads: Lead[];
+  } | null>(null);
 
   const colunas = useMemo(() => {
     const origem = Array.isArray(colunasIniciais) && colunasIniciais.length > 0 ? colunasIniciais : colunasFallback;
@@ -493,116 +511,132 @@ export function KanbanClient({
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-5 py-5 text-slate-950 lg:px-8 lg:py-7">
-      <div className="mx-auto max-w-[1760px] space-y-5">
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-700">Flow Sales CRM</p>
-              <h1 className="mt-2 text-3xl font-black tracking-[-0.04em] text-slate-950">Kanban de oportunidades</h1>
-              <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-600">
-                Funil atual: <strong>{funilAtual.nome}</strong>. Movimente oportunidades com regra, histórico e próxima ação.
-              </p>
-            </div>
+    <main className="flow-premium-page flow-ios-page min-h-screen px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1760px] space-y-4">
+        <AtendimentoHeader
+          active="funil"
+          title="Funil de atendimento"
+          description={`${funilAtual.nome}. Arraste o cliente quando a etapa mudar; regras, histórico e sincronização continuam nos bastidores.`}
+          canManage={podeConfigurar}
+          primaryAction={{ href: "/dashboard/leads/tarefas", label: "Ver prioridades" }}
+          secondaryAction={podeConfigurar ? { href: "/dashboard/configuracoes/kanban", label: "Configurar funil" } : { href: "/dashboard/agenda", label: "Abrir agenda" }}
+        />
 
-            <div className="flex flex-col gap-3 sm:flex-row">
-              {podeConfigurar ? (
-                <Link href="/dashboard/configuracoes/kanban" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-5 text-sm font-black text-blue-700 shadow-sm transition hover:bg-blue-100">
-                  <Settings className="h-4 w-4" />
-                  Configurar funil
-                </Link>
-              ) : null}
-              <Link href="/dashboard/leads/tarefas" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-sm font-black text-white shadow-lg shadow-blue-700/20 transition hover:bg-blue-800">
-                Minhas tarefas
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link href="/dashboard/agenda" className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50">
-                Agenda
-              </Link>
-            </div>
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <KpiCard
+            titulo="Leads"
+            valor={leadsFiltrados.length}
+            detalhe="No filtro atual"
+            icon={Users}
+            tom="slate"
+            onClick={() => setPainelResumo({ titulo: "Leads do filtro atual", subtitulo: "Todos os clientes exibidos neste momento.", leads: leadsFiltrados })}
+          />
+          <KpiCard
+            titulo="Quentes"
+            valor={totalQuentes}
+            detalhe="Prioridade comercial"
+            icon={Flame}
+            tom="red"
+            onClick={() => setPainelResumo({ titulo: "Oportunidades quentes", subtitulo: "Clientes com maior prioridade comercial agora.", leads: leadsFiltrados.filter((lead) => lead.temperatura === "quente") })}
+          />
+          <KpiCard
+            titulo="Atrasados"
+            valor={totalAtrasados}
+            detalhe="Resolver primeiro"
+            icon={AlertTriangle}
+            tom="orange"
+            onClick={() => setPainelResumo({ titulo: "Retornos atrasados", subtitulo: "Clientes que já deveriam ter recebido uma nova ação.", leads: leadsFiltrados.filter((lead) => lead.data_proxima_acao && isAtrasado(lead.data_proxima_acao)) })}
+          />
+          <KpiCard
+            titulo="Venda pendente"
+            valor={totalVendasPendentes}
+            detalhe="Validação comercial"
+            icon={ShieldCheck}
+            tom="emerald"
+            onClick={() => setPainelResumo({ titulo: "Vendas pendentes", subtitulo: "Negociações aguardando validação comercial.", leads: leadsFiltrados.filter((lead) => lead.venda_pendente_validacao) })}
+          />
+          <KpiCard
+            titulo="Avanço"
+            valor={`${taxaAvanco}%`}
+            detalhe="Etapas avançadas"
+            icon={TrendingUp}
+            tom="blue"
+            onClick={() => setPainelResumo({
+              titulo: "Oportunidades avançadas",
+              subtitulo: "Clientes que já chegaram a agendamento, visita ou etapa comercial.",
+              leads: leadsFiltrados.filter((lead) => {
+                const coluna = colunas.find((item) => item.chave === lead.etapa);
+                return Boolean(coluna?.etapa_venda || coluna?.etapa_final || ["agendado", "visita"].includes(lead.etapa));
+              }),
+            })}
+          />
+        </section>
+
+        <section className="flow-ios-toolbar">
+          <div className="flow-ios-segmented">
+            {[
+              { chave: "funil", label: "Todos" },
+              { chave: "minhas", label: "Meus leads" },
+              { chave: "vendas", label: "Vendas pendentes" },
+            ].map((item) => (
+              <button key={item.chave} type="button" onClick={() => setVisao(item.chave as any)} className={visao === item.chave ? "is-active" : ""}>
+                {item.label}
+              </button>
+            ))}
           </div>
+
+          <label className="flow-ios-search">
+            <Search className="h-4 w-4" />
+            <input value={busca} onChange={(event) => setBusca(event.target.value)} placeholder="Buscar cliente, telefone, veículo ou vendedor" />
+          </label>
+
+          <select value={temperatura} onChange={(event) => setTemperatura(event.target.value)} className="flow-ios-select">
+            <option value="todos">Temperatura</option>
+            <option value="quente">Quente</option>
+            <option value="morno">Morno</option>
+            <option value="frio">Frio</option>
+          </select>
+
+          <select value={filtroPrioridade} onChange={(event) => setFiltroPrioridade(event.target.value)} className="flow-ios-select">
+            <option value="todos">Todas as prioridades</option>
+            <option value="atrasados">Atrasados</option>
+            <option value="sem_contato">Sem contato</option>
+            <option value="vendas">Vendas pendentes</option>
+          </select>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <KpiCard titulo="Leads" valor={leadsFiltrados.length} detalhe="No filtro atual" icon={Users} tom="slate" />
-          <KpiCard titulo="Quentes" valor={totalQuentes} detalhe="Prioridade comercial" icon={Flame} tom="red" />
-          <KpiCard titulo="Atrasados" valor={totalAtrasados} detalhe="Precisam retorno" icon={AlertTriangle} tom="orange" />
-          <KpiCard titulo="Venda pendente" valor={totalVendasPendentes} detalhe="Validação comercial" icon={ShieldCheck} tom="emerald" />
-          <KpiCard titulo="Avanço" valor={`${taxaAvanco}%`} detalhe="Etapas avançadas" icon={TrendingUp} tom="blue" />
-        </section>
+        {erro ? <div className="flow-ios-alert flow-ios-alert-error">{erro}</div> : null}
+        {sucesso ? <div className="flow-ios-alert flow-ios-alert-success">{sucesso}</div> : null}
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="grid gap-3 xl:grid-cols-[auto_1fr_auto_auto] xl:items-center">
-            <div className="flex flex-wrap gap-2">
-              {[
-                { chave: "funil", label: "Funil completo" },
-                { chave: "minhas", label: "Minhas oportunidades" },
-                { chave: "vendas", label: "Vendas pendentes" },
-              ].map((item) => (
-                <button key={item.chave} type="button" onClick={() => setVisao(item.chave as any)} className={`h-10 rounded-xl px-4 text-xs font-black transition ${visao === item.chave ? "bg-blue-700 text-white shadow-lg shadow-blue-700/20" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}>
-                  {item.label}
-                </button>
-              ))}
-            </div>
-
-            <label className="relative block">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input value={busca} onChange={(event) => setBusca(event.target.value)} placeholder="Buscar cliente, telefone, veículo, vendedor, loja..." className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm font-semibold outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100" />
-            </label>
-
-            <select value={temperatura} onChange={(event) => setTemperatura(event.target.value)} className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-black text-slate-700 outline-none">
-              <option value="todos">Temperatura</option>
-              <option value="quente">Quente</option>
-              <option value="morno">Morno</option>
-              <option value="frio">Frio</option>
-            </select>
-
-            <select value={filtroPrioridade} onChange={(event) => setFiltroPrioridade(event.target.value)} className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-black text-slate-700 outline-none">
-              <option value="todos">Todos</option>
-              <option value="atrasados">Atrasados</option>
-              <option value="sem_contato">Sem contato</option>
-              <option value="vendas">Vendas pendentes</option>
-            </select>
-          </div>
-        </section>
-
-        {erro ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-black text-red-700">{erro}</div> : null}
-        {sucesso ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700">{sucesso}</div> : null}
-
-        <section className="grid gap-4 xl:grid-cols-[0.7fr_1.3fr]">
-          <div className="rounded-3xl border border-blue-100 bg-blue-50 p-5">
-            <h2 className="flex items-center gap-2 text-lg font-black text-slate-950"><Gauge className="h-5 w-5 text-blue-700" />Diagnóstico</h2>
-            <p className="mt-3 text-sm font-semibold leading-6 text-slate-700">
+        <section className="flow-ios-priority-strip">
+          <div className="flow-ios-priority-icon"><Gauge className="h-5 w-5" strokeWidth={1.9} /></div>
+          <div className="min-w-0">
+            <p className="flow-ios-eyebrow">Prioridade do momento</p>
+            <p className="mt-1 text-sm font-medium text-slate-700">
               {totalAtrasados > 0
-                ? `${totalAtrasados} oportunidade(s) com retorno atrasado. Priorize antes de avançar novas negociações.`
+                ? `${totalAtrasados} oportunidade(s) aguardam retorno. Resolva essas primeiro.`
                 : totalQuentes > 0
-                  ? `${totalQuentes} oportunidade(s) quentes. Acelere contato, visita, simulação ou proposta.`
-                  : "Funil sem alerta crítico no filtro atual."}
+                  ? `${totalQuentes} oportunidade(s) quentes estão prontas para avançar.`
+                  : "Nenhum alerta crítico no filtro atual."}
             </p>
           </div>
-
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="flex items-center gap-2 text-lg font-black text-slate-950"><Filter className="h-5 w-5 text-blue-700" />Operação integrada</h2>
-            <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">
-              O Kanban registra etapa, próxima ação e observação. As movimentações ficam preparadas para sincronização com C2S, integrações de chamada e histórico do lead.
-            </p>
-          </div>
+          <span className="hidden text-xs font-medium text-slate-400 lg:block">C2S, chamadas e histórico sincronizados no mesmo fluxo</span>
         </section>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex flex-col justify-between gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-center">
+        <section className="flow-kanban-board">
+          <div className="flow-kanban-board-head">
             <div>
-              <h2 className="text-xl font-black text-slate-950">Funil de atendimento</h2>
-              <p className="mt-1 text-sm font-semibold text-slate-500">Arraste o card para alterar etapa. Regras do funil são aplicadas antes de salvar.</p>
+              <h2>Pipeline</h2>
+              <p>Arraste para avançar. As regras aparecem somente quando forem necessárias.</p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">{colunas.length} colunas</span>
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black text-slate-600">{leadsFiltrados.length} leads</span>
+            <div className="flex gap-2">
+              <span>{colunas.length} etapas</span>
+              <span>{leadsFiltrados.length} leads</span>
             </div>
           </div>
 
-          <div className="overflow-x-auto pb-1">
-            <div className="grid gap-4" style={{ minWidth: `${Math.max(colunas.length, 1) * 292}px`, gridTemplateColumns: `repeat(${Math.max(colunas.length, 1)}, minmax(276px, 1fr))` }}>
+          <div className="overflow-x-auto pb-2">
+            <div className="grid gap-3" style={{ minWidth: `${Math.max(colunas.length, 1) * 300}px`, gridTemplateColumns: `repeat(${Math.max(colunas.length, 1)}, minmax(284px, 1fr))` }}>
               {colunas.map((coluna) => {
                 const itens = grupos.get(coluna.chave) || [];
                 const quentes = itens.filter((lead) => lead.temperatura === "quente").length;
@@ -610,31 +644,27 @@ export function KanbanClient({
                 const config = cor(coluna.cor);
 
                 return (
-                  <div key={coluna.id} onDragOver={(event) => { event.preventDefault(); setDestino(coluna.chave); }} onDragLeave={() => setDestino("")} onDrop={(event) => { event.preventDefault(); soltarNaEtapa(coluna.chave); }} className={`flex max-h-[calc(100vh-260px)] flex-col rounded-3xl border bg-white shadow-sm transition ${destino === coluna.chave ? "border-blue-500 ring-4 ring-blue-100" : "border-slate-200"}`}>
-                    <div className="sticky top-0 z-10 overflow-hidden rounded-t-3xl border-b border-slate-100 bg-white">
-                      <div className={`h-1.5 ${config.bar}`} />
-                      <div className="p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className={`h-4 w-4 rounded-full ${config.dot}`} />
-                              <h2 className="text-base font-black text-slate-950">{coluna.titulo}</h2>
-                            </div>
-                            <p className="mt-1 text-xs font-bold text-slate-500">{coluna.subtitulo || coluna.descricao || "Etapa do funil"}</p>
-                          </div>
-                          <div className={`rounded-xl px-2.5 py-1 text-xs font-black ${config.soft}`}>{itens.length}</div>
+                  <div key={coluna.id} onDragOver={(event) => { event.preventDefault(); setDestino(coluna.chave); }} onDragLeave={() => setDestino("")} onDrop={(event) => { event.preventDefault(); soltarNaEtapa(coluna.chave); }} className={`flow-kanban-column ${destino === coluna.chave ? "is-drop-target" : ""}`}>
+                    <div className="flow-kanban-column-head">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2.5">
+                          <span className={`h-2.5 w-2.5 rounded-full ${config.dot}`} />
+                          <h3>{coluna.titulo}</h3>
+                          <span className="flow-kanban-count">{itens.length}</span>
                         </div>
-                        <div className="mt-3 grid grid-cols-3 gap-2">
-                          <div className="rounded-xl bg-slate-50 p-2 text-center"><p className="text-sm font-black text-slate-950">{itens.length}</p><p className="text-[9px] font-black uppercase text-slate-400">Total</p></div>
-                          <div className="rounded-xl bg-red-50 p-2 text-center"><p className="text-sm font-black text-red-700">{quentes}</p><p className="text-[9px] font-black uppercase text-red-400">Quentes</p></div>
-                          <div className="rounded-xl bg-orange-50 p-2 text-center"><p className="text-sm font-black text-orange-700">{atrasados}</p><p className="text-[9px] font-black uppercase text-orange-400">Atrasos</p></div>
-                        </div>
+                        <p>{coluna.subtitulo || coluna.descricao || "Etapa do atendimento"}</p>
                       </div>
+                      {(quentes > 0 || atrasados > 0) ? (
+                        <div className="flex gap-1.5">
+                          {quentes > 0 ? <span className="flow-kanban-mini-badge text-orange-600">{quentes} quente{quentes === 1 ? "" : "s"}</span> : null}
+                          {atrasados > 0 ? <span className="flow-kanban-mini-badge text-red-600">{atrasados} atraso{atrasados === 1 ? "" : "s"}</span> : null}
+                        </div>
+                      ) : null}
                     </div>
 
-                    <div className="grid gap-3 overflow-y-auto bg-slate-50/70 p-3">
+                    <div className="flow-kanban-card-list">
                       {itens.length === 0 ? (
-                        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-center text-xs font-bold text-slate-400">Arraste uma oportunidade para cá.</div>
+                        <div className="flow-kanban-empty">Arraste uma oportunidade para cá</div>
                       ) : (
                         itens.slice(0, 45).map((lead) => {
                           const chip = chipPrioridade(lead);
@@ -642,32 +672,45 @@ export function KanbanClient({
                           const whatsapp = telefoneWhatsapp(lead);
 
                           return (
-                            <article key={lead.id} draggable onDragStart={() => iniciarArrasto(lead.id)} className={`group cursor-grab rounded-2xl border border-l-4 ${corCard(lead)} border-slate-200 bg-white p-3.5 shadow-sm transition active:cursor-grabbing hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-950/5`}>
-                              <div className="flex items-start justify-between gap-2">
+                            <article
+                              key={lead.id}
+                              draggable
+                              onDragStart={() => iniciarArrasto(lead.id)}
+                              onClick={(event) => {
+                                const alvo = event.target as HTMLElement;
+                                if (alvo.closest("a,button")) return;
+                                setLeadSelecionado(lead);
+                              }}
+                              className={`flow-kanban-card flow-kanban-card-compact ${corCard(lead)}`}
+                            >
+                              <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
-                                  <Link href={`/dashboard/leads/${lead.id}`} className="line-clamp-1 text-sm font-black leading-5 text-slate-950 transition hover:text-blue-700">{lead.nome}</Link>
-                                  <p className="mt-1 line-clamp-1 text-xs font-semibold text-slate-500">{lead.veiculo_interesse || lead.origem || "Sem veículo informado"}</p>
+                                  <button type="button" onClick={() => setLeadSelecionado(lead)} className="flow-kanban-card-name text-left">{lead.nome}</button>
+                                  <p className="flow-kanban-card-vehicle">{lead.veiculo_interesse || lead.origem || "Veículo não informado"}</p>
                                 </div>
-                                {lead.temperatura === "quente" ? <Flame className="h-4 w-4 shrink-0 text-orange-600" /> : null}
+                                {lead.temperatura === "quente" ? <Flame className="h-4 w-4 shrink-0 text-orange-500" strokeWidth={2} /> : null}
                               </div>
 
-                              <div className="mt-2 flex flex-wrap gap-1.5">
-                                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${chip.classe}`}>{chip.texto}</span>
-                                <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-black text-slate-500">{diasEmAberto(lead.criado_em)}</span>
-                                {lead.data_proxima_acao && isHoje(lead.data_proxima_acao) ? <span className="rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[10px] font-black text-blue-700">Hoje</span> : null}
+                              <div className="flow-kanban-compact-meta">
+                                <span className={`flow-kanban-chip ${chip.classe}`}>{chip.texto}</span>
+                                <span className="flow-kanban-chip border-slate-200 bg-slate-50 text-slate-500">{diasEmAberto(lead.criado_em)}</span>
+                                {lead.data_proxima_acao && isHoje(lead.data_proxima_acao) ? <span className="flow-kanban-chip border-blue-100 bg-blue-50 text-blue-600">Hoje</span> : null}
                               </div>
 
-                              <div className="mt-3 grid gap-2 text-xs font-bold text-slate-500">
-                                <p className="inline-flex items-center gap-1"><Phone className="h-3.5 w-3.5 text-blue-700" />{lead.telefone}</p>
-                                <div className="rounded-xl bg-slate-50 px-3 py-2"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Vendedor C2S</p><p className="mt-0.5 line-clamp-1 text-xs font-black text-slate-700">{lead.vendedor_c2s_nome || "Não vinculado"}</p></div>
-                                <div className="rounded-xl bg-slate-50 px-3 py-2"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Próxima ação</p><p className={`mt-0.5 text-xs font-black ${isAtrasado(lead.data_proxima_acao) ? "text-red-700" : "text-slate-700"}`}>{formatarData(lead.data_proxima_acao)}</p></div>
-                                <div className="rounded-xl bg-slate-50 px-3 py-2"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Último resultado</p><p className="mt-0.5 line-clamp-1 text-xs font-black text-slate-700">{ultima ? labelResultado(ultima.resultado) : "Sem histórico"}</p></div>
+                              <div className="flow-kanban-compact-status">
+                                <div className="min-w-0">
+                                  <span>Próxima ação</span>
+                                  <strong className={isAtrasado(lead.data_proxima_acao) ? "text-red-600" : ""}>{formatarData(lead.data_proxima_acao)}</strong>
+                                </div>
+                                <ArrowRight className="h-4 w-4 shrink-0 text-slate-300" strokeWidth={1.8} />
                               </div>
 
-                              <div className="mt-3 grid grid-cols-3 gap-1.5">
-                                <a href={`tel:${lead.telefone}`} className="inline-flex h-8 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 px-2 text-[10px] font-black text-blue-700 transition hover:bg-blue-100">Ligar</a>
-                                {whatsapp ? <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50 px-2 text-[10px] font-black text-emerald-700 transition hover:bg-emerald-100">Whats</a> : <span />}
-                                <Link href={`/dashboard/leads/${lead.id}`} className="inline-flex h-8 items-center justify-center rounded-xl bg-slate-950 px-2 text-[10px] font-black text-white transition hover:bg-blue-700">Abrir</Link>
+                              <div className="flow-kanban-card-footer flow-kanban-card-footer-compact">
+                                <span className="inline-flex min-w-0 items-center gap-1.5 truncate"><Phone className="h-3.5 w-3.5" />{lead.telefone}</span>
+                                <div className="flex gap-1.5">
+                                  <a href={`tel:${lead.telefone}`} className="flow-kanban-action" aria-label={`Ligar para ${lead.nome}`}><Phone className="h-3.5 w-3.5" /></a>
+                                  {whatsapp ? <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer" className="flow-kanban-action text-emerald-600" aria-label={`WhatsApp de ${lead.nome}`}><MessageCircle className="h-3.5 w-3.5" /></a> : null}
+                                </div>
                               </div>
                             </article>
                           );
@@ -680,6 +723,92 @@ export function KanbanClient({
             </div>
           </div>
         </section>
+
+        {painelResumo ? (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/35 px-3 pb-3 pt-16 backdrop-blur-sm sm:items-center sm:px-6 sm:py-8">
+            <div className="flow-ios-sheet w-full max-w-3xl overflow-hidden">
+              <div className="flow-ios-sheet-head">
+                <div className="min-w-0">
+                  <p className="flow-ios-eyebrow text-blue-600">Visão rápida</p>
+                  <h2>{painelResumo.titulo}</h2>
+                  <p>{painelResumo.subtitulo}</p>
+                </div>
+                <button type="button" onClick={() => setPainelResumo(null)} className="flow-ios-icon-button" aria-label="Fechar">
+                  <X className="h-[18px] w-[18px]" />
+                </button>
+              </div>
+
+              <div className="flow-ios-sheet-list">
+                {painelResumo.leads.length === 0 ? (
+                  <div className="flow-ios-empty-state">Nenhum cliente encontrado neste grupo.</div>
+                ) : (
+                  painelResumo.leads.map((lead) => {
+                    const ultima = ultimasPorLead[lead.id];
+                    return (
+                      <button
+                        key={lead.id}
+                        type="button"
+                        onClick={() => { setPainelResumo(null); setLeadSelecionado(lead); }}
+                        className="flow-ios-lead-row"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <strong>{lead.nome}</strong>
+                            {lead.temperatura === "quente" ? <Flame className="h-3.5 w-3.5 text-orange-500" /> : null}
+                          </div>
+                          <p>{lead.veiculo_interesse || lead.origem || "Veículo não informado"}</p>
+                          <span>{ultima ? labelResultado(ultima.resultado) : "Sem histórico"} · {formatarData(lead.data_proxima_acao)}</span>
+                        </div>
+                        <ArrowRight className="h-4 w-4 shrink-0 text-slate-300" />
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {leadSelecionado ? (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/40 px-3 pb-3 pt-16 backdrop-blur-sm sm:items-center sm:px-6 sm:py-8">
+            <div className="flow-ios-sheet w-full max-w-2xl overflow-hidden">
+              <div className="flow-ios-sheet-head">
+                <div className="min-w-0">
+                  <p className="flow-ios-eyebrow text-blue-600">Resumo do atendimento</p>
+                  <h2>{leadSelecionado.nome}</h2>
+                  <p>{leadSelecionado.veiculo_interesse || leadSelecionado.origem || "Veículo não informado"}</p>
+                </div>
+                <button type="button" onClick={() => setLeadSelecionado(null)} className="flow-ios-icon-button" aria-label="Fechar">
+                  <X className="h-[18px] w-[18px]" />
+                </button>
+              </div>
+
+              <div className="flow-ios-lead-detail-grid">
+                <div className="flow-ios-detail-item"><span>Telefone</span><strong>{leadSelecionado.telefone || "Não informado"}</strong></div>
+                <div className="flow-ios-detail-item"><span>Etapa atual</span><strong>{etapaTitulo(colunas, leadSelecionado.etapa)}</strong></div>
+                <div className="flow-ios-detail-item"><span>Temperatura</span><strong>{normalizarTexto(leadSelecionado.temperatura)}</strong></div>
+                <div className="flow-ios-detail-item"><span>Próxima ação</span><strong className={isAtrasado(leadSelecionado.data_proxima_acao) ? "text-red-600" : ""}>{formatarData(leadSelecionado.data_proxima_acao)}</strong></div>
+                <div className="flow-ios-detail-item"><span>Último resultado</span><strong>{ultimasPorLead[leadSelecionado.id] ? labelResultado(ultimasPorLead[leadSelecionado.id].resultado) : "Sem histórico"}</strong></div>
+                <div className="flow-ios-detail-item"><span>Responsável C2S</span><strong>{leadSelecionado.vendedor_c2s_nome || "Não informado"}</strong></div>
+                <div className="flow-ios-detail-item"><span>Loja da carteira</span><strong>{leadSelecionado.loja_carteira_c2s_nome || "Não informada"}</strong></div>
+                <div className="flow-ios-detail-item"><span>Loja da visita</span><strong>{leadSelecionado.loja_visita_nome || "Não informada"}</strong></div>
+              </div>
+
+              {leadSelecionado.observacao ? (
+                <div className="flow-ios-lead-note">
+                  <span>Observação</span>
+                  <p>{leadSelecionado.observacao}</p>
+                </div>
+              ) : null}
+
+              <div className="flow-ios-sheet-actions">
+                <a href={`tel:${leadSelecionado.telefone}`} className="flow-ios-secondary-button"><Phone className="h-4 w-4" /> Ligar</a>
+                {telefoneWhatsapp(leadSelecionado) ? <a href={`https://wa.me/${telefoneWhatsapp(leadSelecionado)}`} target="_blank" rel="noreferrer" className="flow-ios-secondary-button text-emerald-700"><MessageCircle className="h-4 w-4" /> WhatsApp</a> : null}
+                <Link href={`/dashboard/leads/${leadSelecionado.id}`} className="flow-ios-primary-button">Abrir atendimento <ArrowRight className="h-4 w-4" /></Link>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {modal ? (
           <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 px-4 backdrop-blur-sm">

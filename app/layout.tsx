@@ -1,20 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import "./gold-master.css";
 
 export const metadata: Metadata = {
-  title: "Flow Sales CRM",
-  description: "Sistema comercial da Azul Veículos",
+  title: "Azul Resgate | Operação Comercial",
+  description: "Plataforma operacional e comercial da Azul Veículos",
 };
 
 export default function RootLayout({
@@ -27,7 +17,7 @@ export default function RootLayout({
       lang="pt-BR"
       suppressHydrationWarning
       data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className="h-full antialiased"
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

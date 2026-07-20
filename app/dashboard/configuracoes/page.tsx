@@ -444,7 +444,7 @@ export default function Page() {
 
   if (carregando) {
     return (
-      <main className="min-h-screen bg-slate-50 p-4 sm:p-6">
+      <main className="flow-premium-page min-h-screen bg-slate-50 p-4 sm:p-6">
         <div className="flex min-h-[520px] items-center justify-center rounded-3xl border border-slate-200 bg-white">
           <div className="text-center">
             <Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-700" />
@@ -459,7 +459,7 @@ export default function Page() {
 
   if (!dados) {
     return (
-      <main className="min-h-screen bg-slate-50 p-4 sm:p-6">
+      <main className="flow-premium-page min-h-screen bg-slate-50 p-4 sm:p-6">
         <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm font-bold text-red-700">
           {erro || "Não foi possível carregar as configurações."}
         </div>
@@ -468,7 +468,7 @@ export default function Page() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-4 sm:p-6">
+    <main className="flow-premium-page min-h-screen bg-slate-50 p-4 sm:p-6">
       <div className="mx-auto max-w-[1500px] space-y-5">
         <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
           <div className="text-slate-950">

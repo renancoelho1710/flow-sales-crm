@@ -229,7 +229,7 @@ export default function Page() {
 
   if (carregando) {
     return (
-      <main className="p-4 sm:p-6">
+      <main className="flow-premium-page p-4 sm:p-6">
         <div className="flex min-h-[520px] items-center justify-center rounded-3xl border border-slate-200 bg-white">
           <div className="text-center">
             <Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-700" />
@@ -241,7 +241,7 @@ export default function Page() {
   }
 
   return (
-    <main className="p-4 sm:p-6">
+    <main className="flow-premium-page p-4 sm:p-6">
       <div className="mx-auto max-w-[1500px] space-y-5">
         <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-700">Usuários</p>

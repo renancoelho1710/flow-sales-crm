@@ -204,7 +204,7 @@ export default function StatusVendasPage() {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <main className="min-h-screen bg-slate-50 pb-12 text-slate-950">
+    <main className="flow-premium-page min-h-screen bg-slate-50 pb-12 text-slate-950">
       <section className="border-b border-slate-200 bg-white px-6 py-7 shadow-sm">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>

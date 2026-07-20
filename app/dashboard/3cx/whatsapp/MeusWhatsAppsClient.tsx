@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AtendimentoHeader } from "@/components/atendimento/AtendimentoHeader";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -139,168 +140,116 @@ export function MeusWhatsAppsClient({ usuario }: { usuario: Usuario }) {
 
   const resumo = data?.resumo;
   const conversas = data?.conversas || [];
+  const perfil = String(usuario.perfil || "").toLowerCase();
+  const podeGerir = ["adm", "admin", "suporte", "gerente", "supervisor"].includes(perfil);
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-[1760px] space-y-5">
-        <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.06)]">
-          <div className="grid gap-0 xl:grid-cols-[1fr_360px]">
-            <div className="p-6 lg:p-7">
-              <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-700">Meu WhatsApp</p>
-              <h1 className="mt-2 text-3xl font-black tracking-[-0.05em] text-slate-950">Clientes que precisam de resposta</h1>
-              <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-600">
-                Esta tela mostra somente as conversas do WhatsApp corporativo vinculadas ao seu atendimento. O objetivo é evitar cliente esquecido no WhatsApp.
-              </p>
-
-              <div className="mt-6 grid gap-3 md:grid-cols-4">
-                <div className="rounded-3xl bg-orange-50 p-4">
-                  <p className="text-[10px] font-black uppercase text-orange-700">Aguardando resposta</p>
-                  <p className="mt-2 text-3xl font-black">{resumo?.aguardando_resposta || 0}</p>
-                  <p className="mt-1 text-xs font-bold text-orange-700">Responder primeiro</p>
-                </div>
-                <div className="rounded-3xl bg-blue-50 p-4">
-                  <p className="text-[10px] font-black uppercase text-blue-700">Aguardando cliente</p>
-                  <p className="mt-2 text-3xl font-black">{resumo?.aguardando_cliente || 0}</p>
-                  <p className="mt-1 text-xs font-bold text-blue-700">Você já respondeu</p>
-                </div>
-                <div className="rounded-3xl bg-slate-100 p-4">
-                  <p className="text-[10px] font-black uppercase text-slate-600">Sem lead</p>
-                  <p className="mt-2 text-3xl font-black">{resumo?.sem_lead || 0}</p>
-                  <p className="mt-1 text-xs font-bold text-slate-500">Revisar se necessário</p>
-                </div>
-                <div className="rounded-3xl bg-red-50 p-4">
-                  <p className="text-[10px] font-black uppercase text-red-700">Maior espera</p>
-                  <p className="mt-2 text-3xl font-black">{formatarEspera(resumo?.maior_espera_minutos)}</p>
-                  <p className="mt-1 text-xs font-bold text-red-700">Prioridade operacional</p>
-                </div>
-              </div>
+    <main className="flow-premium-page fs-attention-page">
+      <div className="mx-auto max-w-[1540px] space-y-4">
+        <AtendimentoHeader
+          active="conversas"
+          title="Conversas WhatsApp"
+          description="As mensagens que exigem resposta aparecem primeiro. O histórico continua ligado ao lead e ao operador responsável."
+          canManage={podeGerir}
+          primaryAction={{ href: "/dashboard/leads", label: "Abrir fila" }}
+          secondaryAction={{ href: "/dashboard/leads/tarefas", label: "Ver prioridades" }}
+          aside={
+            <div className="fs-attention-operator-chip">
+              <span>{usuario.nome.trim().charAt(0).toUpperCase() || "U"}</span>
+              <div><strong>{usuario.nome}</strong><small>WhatsApp corporativo</small></div>
             </div>
+          }
+        />
 
-            <div className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-6 text-white">
-              <div className="relative z-10">
-                <MessageCircle className="h-9 w-9 text-cyan-200" />
-                <p className="mt-5 text-xs font-black uppercase tracking-[0.24em] text-cyan-200">Operador</p>
-                <p className="mt-2 text-2xl font-black">{usuario.nome}</p>
-                <p className="mt-3 text-sm font-bold leading-6 text-blue-100">
-                  Regra: se a última mensagem foi recebida do cliente, ele aparece como aguardando resposta. Se você respondeu, fica aguardando cliente.
-                </p>
-              </div>
-            </div>
-          </div>
+        <section className="fs-attention-metrics fs-attention-metrics--four">
+          <button type="button" onClick={() => setStatus("aguardando_resposta")} className="fs-attention-metric is-orange">
+            <span className="fs-attention-metric__icon"><MessageCircle className="h-[18px] w-[18px]" /></span>
+            <span className="fs-attention-metric__label">Aguardando resposta</span>
+            <strong>{resumo?.aguardando_resposta || 0}</strong>
+            <small>Cliente falou por último</small>
+          </button>
+          <button type="button" onClick={() => setStatus("aguardando_cliente")} className="fs-attention-metric is-blue">
+            <span className="fs-attention-metric__icon"><CheckCircle2 className="h-[18px] w-[18px]" /></span>
+            <span className="fs-attention-metric__label">Aguardando cliente</span>
+            <strong>{resumo?.aguardando_cliente || 0}</strong>
+            <small>Operador já respondeu</small>
+          </button>
+          <button type="button" onClick={() => setStatus("sem_lead")} className="fs-attention-metric is-violet">
+            <span className="fs-attention-metric__icon"><AlertTriangle className="h-[18px] w-[18px]" /></span>
+            <span className="fs-attention-metric__label">Sem lead vinculado</span>
+            <strong>{resumo?.sem_lead || 0}</strong>
+            <small>Precisa de conferência</small>
+          </button>
+          <button type="button" onClick={() => setStatus("aguardando_resposta")} className="fs-attention-metric is-red">
+            <span className="fs-attention-metric__icon"><Clock3 className="h-[18px] w-[18px]" /></span>
+            <span className="fs-attention-metric__label">Maior espera</span>
+            <strong>{formatarEspera(resumo?.maior_espera_minutos)}</strong>
+            <small>Prioridade operacional</small>
+          </button>
         </section>
 
-        <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
-            <div className="flex flex-wrap gap-2">
+        <section className="fs-attention-toolbar-card">
+          <div className="fs-conversation-toolbar">
+            <div className="fs-attention-segmented">
               {[
-                ["aguardando_resposta", "Aguardando resposta"],
+                ["aguardando_resposta", "Responder"],
                 ["aguardando_cliente", "Aguardando cliente"],
-                ["sem_lead", "Sem lead"],
                 ["com_lead", "Com lead"],
+                ["sem_lead", "Sem lead"],
                 ["todos", "Todos"],
               ].map(([key, label]) => (
-                <button
-                  key={key}
-                  onClick={() => setStatus(key as StatusFiltro)}
-                  className={`rounded-full border px-4 py-2 text-sm font-black ${
-                    status === key ? "border-blue-200 bg-blue-700 text-white" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {label}
-                </button>
+                <button key={key} type="button" onClick={() => setStatus(key as StatusFiltro)} className={status === key ? "is-active" : ""}>{label}</button>
               ))}
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <label className="relative">
-                <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                <input
-                  value={busca}
-                  onChange={(event) => setBusca(event.target.value)}
-                  placeholder="Buscar telefone, cliente ou mensagem..."
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm font-bold outline-none focus:border-blue-600 sm:w-[340px]"
-                />
-              </label>
-              <button
-                onClick={carregar}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50"
-              >
-                <RefreshCw className="h-4 w-4" /> Atualizar
-              </button>
-            </div>
+            <label className="fs-attention-inline-search">
+              <Search className="h-4 w-4" />
+              <input value={busca} onChange={(event) => setBusca(event.target.value)} placeholder="Cliente, telefone ou mensagem" />
+            </label>
+
+            <button type="button" onClick={carregar} className="fs-attention-refresh-button" disabled={carregando}>
+              <RefreshCw className={`h-4 w-4 ${carregando ? "animate-spin" : ""}`} /> Atualizar
+            </button>
           </div>
         </section>
 
-        {erro ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
-            <AlertTriangle className="mr-2 inline h-5 w-5" />
-            {erro}
-          </div>
-        ) : null}
+        {erro ? <div className="fs-attention-alert is-error"><AlertTriangle className="h-5 w-5" /> {erro}</div> : null}
 
         {carregando ? (
-          <div className="grid min-h-[320px] place-items-center rounded-[28px] border border-slate-200 bg-white">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-700" />
-          </div>
+          <div className="fs-attention-loading"><Loader2 className="h-8 w-8 animate-spin" /><span>Atualizando conversas...</span></div>
         ) : (
-          <section className="grid gap-4">
-            {conversas.length ? (
-              conversas.map((conversa) => {
-                const aguardandoResposta = conversa.status_operacional_whatsapp === "cliente_aguardando_resposta";
-                return (
-                  <article key={conversa.id} className={`rounded-[28px] border bg-white p-5 shadow-sm ${aguardandoResposta ? "border-orange-200" : "border-slate-200"}`}>
-                    <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-start">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className={`rounded-full px-3 py-1 text-xs font-black ${aguardandoResposta ? "bg-orange-50 text-orange-700" : "bg-blue-50 text-blue-700"}`}>
-                            {statusTexto(conversa.status_operacional_whatsapp)}
-                          </span>
-                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">
-                            {telefoneFormatado(conversa.telefone_normalizado)}
-                          </span>
-                          {conversa.lead_id ? (
-                            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">Lead vinculado</span>
-                          ) : (
-                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">Sem lead vinculado</span>
-                          )}
-                        </div>
-
-                        <h2 className="mt-3 text-xl font-black tracking-[-0.03em] text-slate-950">
-                          {conversa.lead_nome || conversa.nome_contato || conversa.telefone_normalizado || "Contato WhatsApp"}
-                        </h2>
-
-                        <p className="mt-2 max-w-5xl text-sm font-semibold leading-6 text-slate-600">
-                          {conversa.ultima_mensagem_preview || "Mensagem recebida no WhatsApp corporativo."}
-                        </p>
-
-                        <div className="mt-4 flex flex-wrap gap-3 text-xs font-bold text-slate-500">
-                          <span className="inline-flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" /> Última atualização: {formatarDataHora(conversa.atualizado_em)}</span>
-                          {aguardandoResposta ? <span>Tempo aguardando: {formatarEspera(conversa.minutos_aguardando)}</span> : null}
-                          {conversa.lead_veiculo ? <span>Veículo: {conversa.lead_veiculo}</span> : null}
-                        </div>
-                      </div>
-
-                      <div className="flex shrink-0 flex-col gap-2 sm:flex-row xl:flex-col">
-                        {conversa.lead_id ? (
-                          <Link href={`/dashboard/leads/${conversa.lead_id}`} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-sm font-black text-white">
-                            Ver lead <ArrowRight className="h-4 w-4" />
-                          </Link>
-                        ) : null}
-                        <a href={waLink(conversa.telefone_normalizado)} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 hover:bg-slate-50">
-                          Abrir WhatsApp
-                        </a>
-                      </div>
+          <section className="fs-conversation-list">
+            {conversas.length ? conversas.map((conversa) => {
+              const aguardandoResposta = conversa.status_operacional_whatsapp === "cliente_aguardando_resposta";
+              const nome = conversa.lead_nome || conversa.nome_contato || conversa.telefone_normalizado || "Contato WhatsApp";
+              return (
+                <article key={conversa.id} className={`fs-conversation-row ${aguardandoResposta ? "is-urgent" : ""}`}>
+                  <div className="fs-conversation-row__avatar">{nome.trim().charAt(0).toUpperCase() || "W"}</div>
+                  <div className="fs-conversation-row__main">
+                    <div className="fs-conversation-row__title">
+                      <strong>{nome}</strong>
+                      <span className={aguardandoResposta ? "is-orange" : "is-blue"}>{statusTexto(conversa.status_operacional_whatsapp)}</span>
+                      {conversa.lead_id ? <small className="is-green">Lead vinculado</small> : <small>Sem lead</small>}
                     </div>
-                  </article>
-                );
-              })
-            ) : (
-              <div className="rounded-[28px] border border-slate-200 bg-white p-8 text-center shadow-sm">
-                <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-600" />
-                <h2 className="mt-3 text-xl font-black text-slate-950">Nenhuma pendência nesse filtro</h2>
-                <p className="mt-2 text-sm font-semibold text-slate-500">
-                  Quando algum cliente responder no WhatsApp corporativo, a pendência aparecerá aqui automaticamente.
-                </p>
+                    <p>{conversa.ultima_mensagem_preview || "Mensagem recebida no WhatsApp corporativo."}</p>
+                    <div className="fs-conversation-row__meta">
+                      <span>{telefoneFormatado(conversa.telefone_normalizado)}</span>
+                      <span>{formatarDataHora(conversa.atualizado_em)}</span>
+                      {aguardandoResposta ? <span className="is-urgent">Aguardando há {formatarEspera(conversa.minutos_aguardando)}</span> : null}
+                      {conversa.lead_veiculo ? <span>{conversa.lead_veiculo}</span> : null}
+                    </div>
+                  </div>
+                  <div className="fs-conversation-row__actions">
+                    {conversa.lead_id ? <Link href={`/dashboard/leads/${conversa.lead_id}`}>Abrir atendimento <ArrowRight className="h-4 w-4" /></Link> : null}
+                    <a href={waLink(conversa.telefone_normalizado)} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /> WhatsApp</a>
+                  </div>
+                </article>
+              );
+            }) : (
+              <div className="fs-attention-empty">
+                <span><CheckCircle2 className="h-7 w-7" /></span>
+                <h3>Nenhuma pendência neste filtro</h3>
+                <p>Quando um cliente responder, a conversa aparecerá aqui automaticamente.</p>
               </div>
             )}
           </section>

@@ -9,13 +9,12 @@ import {
   Flame,
   MessageCircle,
   Phone,
-  Plus,
   Search,
-  ShieldCheck,
   Users,
 } from "lucide-react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { AtendimentoHeader } from "@/components/atendimento/AtendimentoHeader";
 
 type PageProps = {
   searchParams?: Promise<{
@@ -313,316 +312,202 @@ export default async function Page({ searchParams }: PageProps) {
   const totalAtrasados = lista.filter((lead) => lead.data_proxima_acao && isAtrasado(lead.data_proxima_acao)).length;
   const totalSemPrimeiroContato = lista.filter((lead) => !lead.data_primeiro_contato).length;
   const totalVendasPendentes = lista.filter((lead) => lead.venda_pendente_validacao).length;
+  const perfil = String(usuarioInterno.perfil || "").toLowerCase();
+  const podeGerir = ["adm", "admin", "suporte", "gerente", "supervisor"].includes(perfil);
+  const filtroBase = mostrandoArquivados ? "filtro=arquivados&" : "";
 
   return (
-    <main className="min-h-screen bg-slate-50 px-5 py-5 text-slate-950 lg:px-8 lg:py-7">
-        <div className="mx-auto max-w-[1480px]">
-          <section className="mb-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-700">
-                  Flow Sales CRM
-                </p>
-                <h1 className="mt-2 text-3xl font-black tracking-[-0.04em] text-slate-950">
-                  {mostrandoArquivados ? "Leads arquivados" : "Leads ativos"}
-                </h1>
-                <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-600">
-                  Fila operacional com prioridade, próxima ação, histórico recente e atalhos rápidos para atendimento.
-                </p>
-              </div>
+    <main className="flow-premium-page fs-attention-page">
+      <div className="mx-auto max-w-[1540px] space-y-4">
+        <AtendimentoHeader
+          active={mostrandoArquivados ? "arquivados" : "fila"}
+          title={mostrandoArquivados ? "Arquivo de atendimentos" : "Fila de atendimento"}
+          description={
+            mostrandoArquivados
+              ? "Consulte oportunidades encerradas sem misturar o histórico com a fila ativa."
+              : "Veja quem precisa de ação, escolha o próximo cliente e continue o atendimento sem trocar de sistema."
+          }
+          canManage={podeGerir}
+          primaryAction={{ href: "/dashboard/leads/novo", label: "Indicar cliente" }}
+          secondaryAction={podeGerir ? { href: "/dashboard/c2s", label: "Sincronizar C2S" } : undefined}
+        />
 
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Link
-                  href="/dashboard/leads/solicitacoes"
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
-                >
-                  Solicitações
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
+        <section className="fs-attention-metrics fs-attention-metrics--six">
+          <Link href={mostrandoArquivados ? "/dashboard/leads?filtro=arquivados" : "/dashboard/leads"} className="fs-attention-metric is-blue">
+            <span className="fs-attention-metric__icon"><Users className="h-[18px] w-[18px]" /></span>
+            <span className="fs-attention-metric__label">Na visualização</span>
+            <strong>{lista.length}</strong>
+            <small>{mostrandoArquivados ? "Registros arquivados" : "Oportunidades ativas"}</small>
+          </Link>
 
-                <Link
-                  href="/dashboard/leads/novo"
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-sm font-black text-white shadow-lg shadow-blue-700/20 transition hover:bg-blue-800"
-                >
-                  <Plus className="h-4 w-4" />
-                  Solicitar novo lead
-                </Link>
-              </div>
-            </div>
-          </section>
+          <Link href={`/dashboard/leads?${filtroBase}temperatura=quente`} className="fs-attention-metric is-red">
+            <span className="fs-attention-metric__icon"><Flame className="h-[18px] w-[18px]" /></span>
+            <span className="fs-attention-metric__label">Quentes</span>
+            <strong>{totalQuentes}</strong>
+            <small>Maior prioridade comercial</small>
+          </Link>
 
-          <section className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-black text-slate-500">Leads listados</p>
-                <Users className="h-5 w-5 text-blue-700" />
-              </div>
-              <p className="mt-4 text-3xl font-black text-slate-950">{lista.length}</p>
-              <p className="mt-1 text-xs font-bold text-slate-400">Limite de 80 por visualização</p>
-            </div>
+          <Link href="/dashboard/leads/tarefas#retornos" className="fs-attention-metric is-cyan">
+            <span className="fs-attention-metric__icon"><CalendarClock className="h-[18px] w-[18px]" /></span>
+            <span className="fs-attention-metric__label">Próximas ações</span>
+            <strong>{totalProximasAcoes}</strong>
+            <small>Retornos programados</small>
+          </Link>
 
-            <div className="rounded-3xl border border-red-100 bg-white p-5 shadow-sm">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-black text-slate-500">Quentes</p>
-                <Flame className="h-5 w-5 text-red-600" />
-              </div>
-              <p className="mt-4 text-3xl font-black text-slate-950">{totalQuentes}</p>
-              <p className="mt-1 text-xs font-bold text-red-500">Prioridade comercial</p>
-            </div>
+          <Link href="/dashboard/leads/tarefas#atrasados" className="fs-attention-metric is-orange">
+            <span className="fs-attention-metric__icon"><AlertTriangle className="h-[18px] w-[18px]" /></span>
+            <span className="fs-attention-metric__label">Atrasados</span>
+            <strong>{totalAtrasados}</strong>
+            <small>Resolver primeiro</small>
+          </Link>
 
-            <div className="rounded-3xl border border-blue-100 bg-white p-5 shadow-sm">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-black text-slate-500">Próximas ações</p>
-                <CalendarClock className="h-5 w-5 text-blue-700" />
-              </div>
-              <p className="mt-4 text-3xl font-black text-slate-950">{totalProximasAcoes}</p>
-              <p className="mt-1 text-xs font-bold text-blue-500">Retornos agendados</p>
-            </div>
+          <Link href="/dashboard/leads/tarefas#primeiro-contato" className="fs-attention-metric is-violet">
+            <span className="fs-attention-metric__icon"><Phone className="h-[18px] w-[18px]" /></span>
+            <span className="fs-attention-metric__label">Sem 1º contato</span>
+            <strong>{totalSemPrimeiroContato}</strong>
+            <small>Ligar antes de avançar</small>
+          </Link>
 
-            <div className="rounded-3xl border border-red-100 bg-white p-5 shadow-sm">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-black text-slate-500">Atrasados</p>
-                <AlertTriangle className="h-5 w-5 text-red-600" />
-              </div>
-              <p className="mt-4 text-3xl font-black text-slate-950">{totalAtrasados}</p>
-              <p className="mt-1 text-xs font-bold text-red-500">Precisam retorno</p>
-            </div>
+          <Link href="/dashboard/kanban?filtro=vendas-pendentes" className="fs-attention-metric is-green">
+            <span className="fs-attention-metric__icon"><CheckCircle2 className="h-[18px] w-[18px]" /></span>
+            <span className="fs-attention-metric__label">Vendas pendentes</span>
+            <strong>{totalVendasPendentes}</strong>
+            <small>Aguardam validação</small>
+          </Link>
+        </section>
 
-            <div className="rounded-3xl border border-purple-100 bg-white p-5 shadow-sm">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-black text-slate-500">Sem 1º contato</p>
-                <Phone className="h-5 w-5 text-purple-700" />
-              </div>
-              <p className="mt-4 text-3xl font-black text-slate-950">{totalSemPrimeiroContato}</p>
-              <p className="mt-1 text-xs font-bold text-purple-500">Ligar primeiro</p>
-            </div>
+        <section className="fs-attention-toolbar-card">
+          <form className="fs-attention-filter-grid" action="/dashboard/leads">
+            <input type="hidden" name="filtro" value={filtro} />
 
-            <div className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-black text-slate-500">Vendas pendentes</p>
-                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-              </div>
-              <p className="mt-4 text-3xl font-black text-slate-950">{totalVendasPendentes}</p>
-              <p className="mt-1 text-xs font-bold text-emerald-500">Aguardando validação</p>
-            </div>
-          </section>
+            <label className="fs-attention-field fs-attention-field--search">
+              <span><Search className="h-4 w-4" /> Buscar</span>
+              <input name="busca" defaultValue={busca} placeholder="Cliente, telefone, e-mail ou veículo" />
+            </label>
 
-          <section className="mb-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <form className="grid gap-4 xl:grid-cols-[1.4fr_0.65fr_0.65fr_0.65fr_auto]" action="/dashboard/leads">
-              <input type="hidden" name="filtro" value={filtro} />
+            <label className="fs-attention-field">
+              <span>Status</span>
+              <select name="status" defaultValue={statusFiltro}>
+                <option value="todos">Todos</option>
+                <option value="morno">Morno</option>
+                <option value="quente">Quente</option>
+                <option value="frio">Frio</option>
+              </select>
+            </label>
 
-              <label className="grid gap-2">
-                <span className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-500">
-                  <Search className="h-4 w-4" />
-                  Buscar lead
-                </span>
-                <input
-                  name="busca"
-                  defaultValue={busca}
-                  placeholder="Nome, telefone, e-mail ou veículo"
-                  className="h-12 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
-                />
-              </label>
+            <label className="fs-attention-field">
+              <span>Etapa</span>
+              <select name="etapa" defaultValue={etapaFiltro}>
+                <option value="todas">Todas</option>
+                <option value="novo">Novo</option>
+                <option value="contato">Em contato</option>
+                <option value="agendado">Agendado</option>
+                <option value="visita">Visitou loja</option>
+                <option value="venda_pendente">Venda pendente</option>
+                <option value="venda_validada">Venda validada</option>
+              </select>
+            </label>
 
-              <label className="grid gap-2">
-                <span className="text-xs font-black uppercase tracking-wide text-slate-500">Status</span>
-                <select
-                  name="status"
-                  defaultValue={statusFiltro}
-                  className="h-12 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
-                >
-                  <option value="todos">Todos</option>
-                  <option value="morno">Morno</option>
-                  <option value="quente">Quente</option>
-                  <option value="frio">Frio</option>
-                </select>
-              </label>
+            <label className="fs-attention-field">
+              <span>Temperatura</span>
+              <select name="temperatura" defaultValue={temperaturaFiltro}>
+                <option value="todas">Todas</option>
+                <option value="morno">Morno</option>
+                <option value="quente">Quente</option>
+                <option value="frio">Frio</option>
+              </select>
+            </label>
 
-              <label className="grid gap-2">
-                <span className="text-xs font-black uppercase tracking-wide text-slate-500">Etapa</span>
-                <select
-                  name="etapa"
-                  defaultValue={etapaFiltro}
-                  className="h-12 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
-                >
-                  <option value="todas">Todas</option>
-                  <option value="novo">Novo</option>
-                  <option value="contato">Em contato</option>
-                  <option value="agendado">Agendado</option>
-                  <option value="visita">Visitou loja</option>
-                  <option value="venda_pendente">Venda pendente</option>
-                  <option value="venda_validada">Venda validada</option>
-                </select>
-              </label>
+            <button type="submit" className="fs-attention-filter-button">
+              <Filter className="h-4 w-4" /> Aplicar
+            </button>
+          </form>
+        </section>
 
-              <label className="grid gap-2">
-                <span className="text-xs font-black uppercase tracking-wide text-slate-500">Temperatura</span>
-                <select
-                  name="temperatura"
-                  defaultValue={temperaturaFiltro}
-                  className="h-12 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
-                >
-                  <option value="todas">Todas</option>
-                  <option value="morno">Morno</option>
-                  <option value="quente">Quente</option>
-                  <option value="frio">Frio</option>
-                </select>
-              </label>
-
-              <button
-                type="submit"
-                className="mt-auto inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-black text-white transition hover:bg-blue-700"
-              >
-                <Filter className="h-4 w-4" />
-                Filtrar
-              </button>
-            </form>
-          </section>
-
-          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex flex-col justify-between gap-3 border-b border-slate-100 px-5 py-4 md:flex-row md:items-center">
-              <div>
-                <h2 className="text-xl font-black text-slate-950">Fila de atendimento</h2>
-                <p className="mt-1 text-sm font-semibold text-slate-500">
-                  {error ? "Não foi possível carregar os leads." : `${lista.length} lead(s) carregado(s) nesta visualização.`}
-                </p>
-              </div>
-
-              <div className="flex rounded-xl border border-slate-200 bg-slate-50 p-1">
-                <Link
-                  href="/dashboard/leads"
-                  className={`rounded-lg px-4 py-2 text-xs font-black transition ${
-                    !mostrandoArquivados ? "bg-blue-700 text-white shadow-sm" : "text-slate-600 hover:bg-white"
-                  }`}
-                >
-                  Ativos
-                </Link>
-                <Link
-                  href="/dashboard/leads?filtro=arquivados"
-                  className={`rounded-lg px-4 py-2 text-xs font-black transition ${
-                    mostrandoArquivados ? "bg-blue-700 text-white shadow-sm" : "text-slate-600 hover:bg-white"
-                  }`}
-                >
-                  Arquivados
-                </Link>
-              </div>
+        <section className="fs-attention-list-card">
+          <header className="fs-attention-list-card__header">
+            <div>
+              <p className="fs-attention-eyebrow">Ordem de trabalho</p>
+              <h2>{mostrandoArquivados ? "Histórico arquivado" : "Próximos atendimentos"}</h2>
+              <span>{error ? "Não foi possível carregar os leads." : `${lista.length} cliente(s) nesta visualização.`}</span>
             </div>
 
-            {lista.length === 0 ? (
-              <div className="grid min-h-[260px] place-items-center px-6 py-12 text-center">
-                <div>
-                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
-                    <Users className="h-8 w-8" />
-                  </div>
-                  <h3 className="mt-4 text-xl font-black text-slate-950">Nenhum lead encontrado</h3>
-                  <p className="mt-2 max-w-md text-sm font-semibold leading-6 text-slate-500">
-                    Ajuste os filtros ou importe uma base para começar a acompanhar os leads por aqui.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {lista.map((lead) => {
-                  const ultima = ultimaPorLead.get(lead.id);
-                  const prioridade = prioridadeLead(lead, ultima);
-                  const whatsapp = telefoneWhatsapp(lead);
+            <div className="fs-attention-segmented">
+              <Link href="/dashboard/leads" className={!mostrandoArquivados ? "is-active" : ""}>Ativos</Link>
+              <Link href="/dashboard/leads?filtro=arquivados" className={mostrandoArquivados ? "is-active" : ""}>Arquivados</Link>
+            </div>
+          </header>
 
-                  return (
-                    <article key={lead.id} className="grid gap-4 px-5 py-4 transition hover:bg-slate-50 xl:grid-cols-[1.1fr_0.85fr_0.85fr_0.75fr_auto] xl:items-center">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Link
-                            href={`/dashboard/leads/${lead.id}`}
-                            className="text-base font-black text-slate-950 transition hover:text-blue-700"
-                          >
-                            {lead.nome}
-                          </Link>
-                          <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black ${corTemperatura(lead.temperatura)}`}>
-                            {normalizarTexto(lead.temperatura)}
-                          </span>
-                          <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black ${corEtapa(lead.etapa)}`}>
-                            {normalizarTexto(lead.etapa)}
-                          </span>
+          {lista.length === 0 ? (
+            <div className="fs-attention-empty">
+              <span><Users className="h-7 w-7" /></span>
+              <h3>Nenhum lead encontrado</h3>
+              <p>Ajuste os filtros ou sincronize uma base para começar o atendimento.</p>
+            </div>
+          ) : (
+            <div className="fs-lead-list">
+              {lista.map((lead) => {
+                const ultima = ultimaPorLead.get(lead.id);
+                const prioridade = prioridadeLead(lead, ultima);
+                const whatsapp = telefoneWhatsapp(lead);
+                const inicial = lead.nome.trim().charAt(0).toUpperCase() || "C";
+
+                return (
+                  <article key={lead.id} className="fs-lead-row">
+                    <div className="fs-lead-row__identity">
+                      <span className="fs-lead-avatar">{inicial}</span>
+                      <div className="min-w-0">
+                        <div className="fs-lead-row__title">
+                          <Link href={`/dashboard/leads/${lead.id}`}>{lead.nome}</Link>
+                          <span className={corTemperatura(lead.temperatura)}>{normalizarTexto(lead.temperatura)}</span>
+                          <span className={corEtapa(lead.etapa)}>{normalizarTexto(lead.etapa)}</span>
                         </div>
-
-                        <div className="mt-2 flex flex-wrap gap-3 text-xs font-bold text-slate-500">
-                          <span className="inline-flex items-center gap-1">
-                            <Phone className="h-3.5 w-3.5 text-blue-700" />
-                            {lead.telefone}
-                          </span>
-                          {lead.veiculo_interesse ? (
-                            <span>{lead.veiculo_interesse}</span>
-                          ) : null}
-                          {lead.origem ? (
-                            <span>Origem: {lead.origem}</span>
-                          ) : null}
+                        <div className="fs-lead-row__meta">
+                          <span><Phone className="h-3.5 w-3.5" /> {lead.telefone}</span>
+                          {lead.veiculo_interesse ? <span>{lead.veiculo_interesse}</span> : null}
+                          {lead.origem ? <span>{lead.origem}</span> : null}
                         </div>
                       </div>
+                    </div>
 
-                      <div className={`rounded-2xl border px-4 py-3 ${prioridade.classe}`}>
-                        <p className="text-xs font-black uppercase tracking-wide">{prioridade.label}</p>
-                        <p className="mt-1 text-xs font-bold opacity-80">{prioridade.descricao}</p>
-                      </div>
+                    <div className={`fs-lead-context ${prioridade.classe}`}>
+                      <span>{prioridade.label}</span>
+                      <small>{prioridade.descricao}</small>
+                    </div>
 
-                      <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
-                        <p className="flex items-center gap-1 text-xs font-black uppercase tracking-wide text-slate-400">
-                          <CalendarClock className="h-3.5 w-3.5" />
-                          Próxima ação
-                        </p>
-                        <p className={`mt-1 text-sm font-black ${isAtrasado(lead.data_proxima_acao) ? "text-red-700" : "text-slate-900"}`}>
-                          {lead.data_proxima_acao ? formatarDataCurta(lead.data_proxima_acao) : "Sem próxima ação"}
-                        </p>
-                      </div>
+                    <div className="fs-lead-detail">
+                      <span><CalendarClock className="h-3.5 w-3.5" /> Próxima ação</span>
+                      <strong className={isAtrasado(lead.data_proxima_acao) ? "text-red-700" : ""}>
+                        {lead.data_proxima_acao ? formatarDataCurta(lead.data_proxima_acao) : "Sem próxima ação"}
+                      </strong>
+                    </div>
 
-                      <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
-                        <p className="flex items-center gap-1 text-xs font-black uppercase tracking-wide text-slate-400">
-                          <Clock3 className="h-3.5 w-3.5" />
-                          Último contato
-                        </p>
-                        <p className="mt-1 text-sm font-black text-slate-900">
-                          {ultima ? labelResultado(ultima.resultado) : "Sem histórico"}
-                        </p>
-                        <p className="mt-1 text-xs font-bold text-slate-400">
-                          {ultima ? formatarData(ultima.criado_em) : formatarData(lead.data_ultimo_contato)}
-                        </p>
-                      </div>
+                    <div className="fs-lead-detail">
+                      <span><Clock3 className="h-3.5 w-3.5" /> Último contato</span>
+                      <strong>{ultima ? labelResultado(ultima.resultado) : "Sem histórico"}</strong>
+                      <small>{ultima ? formatarData(ultima.criado_em) : formatarData(lead.data_ultimo_contato)}</small>
+                    </div>
 
-                      <div className="flex flex-wrap justify-start gap-2 xl:justify-end">
-                        <a
-                          href={`tel:${lead.telefone}`}
-                          className="inline-flex h-10 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 px-3 text-xs font-black text-blue-700 transition hover:bg-blue-100"
-                        >
-                          <Phone className="mr-1 h-3.5 w-3.5" />
-                          Ligar
+                    <div className="fs-lead-row__actions">
+                      <a href={`tel:${lead.telefone}`} title="Ligar" aria-label={`Ligar para ${lead.nome}`}>
+                        <Phone className="h-4 w-4" />
+                      </a>
+                      {whatsapp ? (
+                        <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer" title="WhatsApp" aria-label={`Abrir WhatsApp de ${lead.nome}`}>
+                          <MessageCircle className="h-4 w-4" />
                         </a>
-
-                        {whatsapp ? (
-                          <a
-                            href={`https://wa.me/${whatsapp}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex h-10 items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50 px-3 text-xs font-black text-emerald-700 transition hover:bg-emerald-100"
-                          >
-                            <MessageCircle className="mr-1 h-3.5 w-3.5" />
-                            WhatsApp
-                          </a>
-                        ) : null}
-
-                        <Link
-                          href={`/dashboard/leads/${lead.id}`}
-                          className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-950 px-3 text-xs font-black text-white transition hover:bg-blue-700"
-                        >
-                          Abrir
-                          <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                        </Link>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-        </div>
+                      ) : null}
+                      <Link href={`/dashboard/leads/${lead.id}`} className="is-primary">
+                        Atender <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      </div>
     </main>
   );
 }

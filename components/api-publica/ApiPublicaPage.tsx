@@ -268,7 +268,7 @@ export function ApiPublicaPage() {
   });
 
   return (
-    <main className="min-h-screen bg-slate-50 p-4 sm:p-6">
+    <main className="flow-premium-page min-h-screen bg-slate-50 p-4 sm:p-6">
       <div className="mx-auto max-w-[1500px] space-y-5">
         <section className="rounded-[30px] border border-slate-200 bg-white p-7 shadow-sm">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">

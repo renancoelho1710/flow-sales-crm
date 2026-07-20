@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { AgendaCalendarioClient, type AgendaItem } from "./AgendaCalendarioClient";
+import {
+  AgendaCalendarioClient,
+  type AgendaItem,
+  type AgendaVisao,
+} from "./AgendaCalendarioClient";
 
 type Agendamento = {
   id: string;
@@ -38,11 +42,26 @@ type Lead = {
   atendente_resgate_nome: string | null;
 };
 
+type PageProps = {
+  searchParams: Promise<{
+    periodo?: string | string[];
+  }>;
+};
+
 function normalizarTelefone(valor?: string | null) {
   return String(valor || "").replace(/\D/g, "");
 }
 
-export default async function Page() {
+function normalizarVisao(valor?: string | string[]): AgendaVisao {
+  const recebido = Array.isArray(valor) ? valor[0] : valor;
+  return recebido === "semana" || recebido === "mes" || recebido === "ano"
+    ? recebido
+    : "mes";
+}
+
+export default async function Page({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const visaoInicial = normalizarVisao(params.periodo);
   const supabase = await createClient();
 
   const {
@@ -85,7 +104,7 @@ export default async function Page() {
       loja_carteira_c2s_nome,
       loja_visita_nome,
       atendente_resgate_nome
-      `
+      `,
     )
     .order("inicio", { ascending: true })
     .limit(700);
@@ -95,7 +114,9 @@ export default async function Page() {
   }
 
   const agendamentos = (agendamentosData || []) as Agendamento[];
-  const leadIds = Array.from(new Set(agendamentos.map((item) => item.lead_id).filter(Boolean)));
+  const leadIds = Array.from(
+    new Set(agendamentos.map((item) => item.lead_id).filter(Boolean)),
+  );
 
   const { data: leadsData } = leadIds.length
     ? await supabase
@@ -115,7 +136,7 @@ export default async function Page() {
           loja_carteira_c2s_nome,
           loja_visita_nome,
           atendente_resgate_nome
-          `
+          `,
         )
         .in("id", leadIds)
     : { data: [] as Lead[] };
@@ -133,17 +154,27 @@ export default async function Page() {
       titulo: agendamento.titulo || lead?.nome || "Agendamento",
       cliente: lead?.nome || "Lead não localizado",
       telefone: lead?.telefone || "",
-      whatsapp: normalizarTelefone(lead?.telefone_normalizado || lead?.telefone),
+      whatsapp: normalizarTelefone(
+        lead?.telefone_normalizado || lead?.telefone,
+      ),
       tipo: agendamento.tipo || "agendamento",
       inicio: agendamento.inicio,
       fim: agendamento.fim,
       status: agendamento.status || "agendado",
       observacao: agendamento.observacao || "",
       veiculo: lead?.veiculo_interesse || agendamento.veiculo_interesse || "",
-      vendedorC2S: agendamento.vendedor_c2s_nome || lead?.vendedor_c2s_nome || "",
-      lojaCarteira: agendamento.loja_carteira_c2s_nome || lead?.loja_carteira_c2s_nome || "",
-      lojaVisita: agendamento.loja_visita_nome || lead?.loja_visita_nome || "",
-      atendenteResgate: agendamento.atendente_resgate_nome || lead?.atendente_resgate_nome || "",
+      vendedorC2S:
+        agendamento.vendedor_c2s_nome || lead?.vendedor_c2s_nome || "",
+      lojaCarteira:
+        agendamento.loja_carteira_c2s_nome ||
+        lead?.loja_carteira_c2s_nome ||
+        "",
+      lojaVisita:
+        agendamento.loja_visita_nome || lead?.loja_visita_nome || "",
+      atendenteResgate:
+        agendamento.atendente_resgate_nome ||
+        lead?.atendente_resgate_nome ||
+        "",
       c2sSyncStatus: agendamento.c2s_sync_status || "pendente",
       origem: agendamento.origem || lead?.origem || "",
       etapa: lead?.etapa || "",
@@ -151,5 +182,11 @@ export default async function Page() {
     };
   });
 
-  return <AgendaCalendarioClient usuario={usuarioInterno} itens={itens} />;
+  return (
+    <AgendaCalendarioClient
+      usuario={usuarioInterno}
+      itens={itens}
+      visaoInicial={visaoInicial}
+    />
+  );
 }

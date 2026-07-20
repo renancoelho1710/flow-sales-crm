@@ -12,6 +12,7 @@ import {
   CalendarDays,
   ChevronDown,
   ChevronRight,
+  Headset,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -19,7 +20,6 @@ import {
   Search,
   Settings,
   UserCog,
-  Users,
   X,
 } from "lucide-react";
 
@@ -102,13 +102,13 @@ const menuItems: MenuItem[] = [
   {
     secao: "rotina",
     label: "Atendimento",
-    icon: Users,
+    icon: Headset,
     tab: "leads-ativos",
     href: "/dashboard/leads",
     subitems: [
-      { label: "Leads ativos", tab: "leads-ativos", href: "/dashboard/leads" },
+      { label: "Fila de atendimento", tab: "leads-ativos", href: "/dashboard/leads" },
       {
-        label: "Minhas tarefas",
+        label: "Prioridades do dia",
         tab: "leads-tarefas",
         href: "/dashboard/leads/tarefas",
       },
@@ -118,24 +118,23 @@ const menuItems: MenuItem[] = [
         href: "/dashboard/kanban",
       },
       {
-        label: "Meus WhatsApps",
+        label: "Conversas WhatsApp",
         tab: "whatsapp-3cx",
         href: "/dashboard/3cx/whatsapp",
       },
       {
-        label: "Novo lead",
+        label: "Indicar cliente",
         tab: "novo-lead",
         href: "/dashboard/leads/novo",
-        perfis: perfisGestao,
       },
       {
-        label: "Solicitações",
+        label: "Aprovar solicitações",
         tab: "solicitacoes-leads",
         href: "/dashboard/leads/solicitacoes",
         perfis: perfisGestao,
       },
       {
-        label: "Importar base",
+        label: "Sincronizar C2S",
         tab: "importar-base",
         href: "/dashboard/c2s",
         perfis: perfisGestao,
@@ -394,6 +393,79 @@ function hrefSubitemAtivo(
   return search.includes(queryString);
 }
 
+
+type MenuPaginaAtual = {
+  menuLabel: string;
+  submenuLabel: string;
+};
+
+function localizarMenuDaPaginaAtual({
+  itens,
+  pathname,
+  search,
+  activeTab,
+}: {
+  itens: MenuItem[];
+  pathname: string;
+  search: string;
+  activeTab?: string;
+}): MenuPaginaAtual | null {
+  for (const item of itens) {
+    const itemDiretoAtivo =
+      item.subitems.length === 0 &&
+      (hrefAtivo(pathname, item.href) || activeTab === item.tab);
+
+    if (itemDiretoAtivo) {
+      return {
+        menuLabel: item.label,
+        submenuLabel: "",
+      };
+    }
+
+    for (const subitem of item.subitems) {
+      const filhos: SubItem[] = subitem.children ?? [];
+
+      if (filhos.length > 0) {
+        const filhoAtivo = filhos.some((child) => {
+          return (
+            hrefSubitemAtivo(pathname, search, child.href) ||
+            activeTab === child.tab
+          );
+        });
+
+        if (filhoAtivo) {
+          return {
+            menuLabel: item.label,
+            submenuLabel: subitem.tab,
+          };
+        }
+
+        continue;
+      }
+
+      const subitemAtivo =
+        hrefSubitemAtivo(pathname, search, subitem.href) ||
+        activeTab === subitem.tab;
+
+      if (subitemAtivo) {
+        return {
+          menuLabel: item.label,
+          submenuLabel: "",
+        };
+      }
+    }
+
+    if (activeTab === item.tab) {
+      return {
+        menuLabel: item.label,
+        submenuLabel: "",
+      };
+    }
+  }
+
+  return null;
+}
+
 function buscarValor(
   configs: ConfigItem[] | undefined,
   chave: string,
@@ -497,6 +569,7 @@ export function DashboardShell({
   const router = useRouter();
   const supabase = createClient();
   const menuContentRef = useRef<HTMLDivElement | null>(null);
+  const menuCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [menuAberto, setMenuAberto] = useState(false);
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
@@ -516,7 +589,7 @@ export function DashboardShell({
   const perfil = normalizarPerfil(usuario.perfil);
   const menuVisualAberto = menuAberto || menuMobileAberto;
 
-  const itensVisiveis = useMemo(() => {
+  const itensVisiveis = useMemo<MenuItem[]>(() => {
     return menuItems
       .filter((item) => podeVer(perfil, item.perfis))
       .map((item) => ({
@@ -533,28 +606,78 @@ export function DashboardShell({
       }));
   }, [perfil]);
 
+  const menuDaPaginaAtual = useMemo<MenuPaginaAtual | null>(() => {
+    return localizarMenuDaPaginaAtual({
+      itens: itensVisiveis,
+      pathname,
+      search,
+      activeTab,
+    });
+  }, [activeTab, itensVisiveis, pathname, search]);
+
+  function cancelarFechamentoMenu() {
+    if (!menuCloseTimerRef.current) return;
+    clearTimeout(menuCloseTimerRef.current);
+    menuCloseTimerRef.current = null;
+  }
+
+  function restaurarMenuDaPaginaAtual() {
+    setOpenMenus(menuDaPaginaAtual ? [menuDaPaginaAtual.menuLabel] : []);
+    setOpenSubmenus(
+      menuDaPaginaAtual?.submenuLabel
+        ? [menuDaPaginaAtual.submenuLabel]
+        : [],
+    );
+  }
+
+  function abrirMenuComFluidez() {
+    cancelarFechamentoMenu();
+    if (menuMobileAberto) return;
+
+    restaurarMenuDaPaginaAtual();
+    setMenuAberto(true);
+  }
+
+  function abrirMenuMobile() {
+    restaurarMenuDaPaginaAtual();
+    setMenuMobileAberto(true);
+  }
+
+  function alternarMenuDesktop() {
+    if (menuAberto) {
+      setMenuAberto(false);
+      return;
+    }
+
+    restaurarMenuDaPaginaAtual();
+    setMenuAberto(true);
+  }
+
+  function agendarFechamentoMenu() {
+    if (menuMobileAberto) return;
+    cancelarFechamentoMenu();
+    menuCloseTimerRef.current = setTimeout(() => {
+      setMenuAberto(false);
+      menuCloseTimerRef.current = null;
+    }, 180);
+  }
+
   function fecharMenuMobile() {
     setMenuMobileAberto(false);
     setOpenSubmenus([]);
   }
 
   function toggleSubmenu(label: string) {
-    setOpenSubmenus((atuais) =>
-      atuais.includes(label)
-        ? atuais.filter((item) => item !== label)
-        : [...atuais, label],
-    );
+    setOpenSubmenus((atuais) => (atuais.includes(label) ? [] : [label]));
   }
 
   function toggleMenu(label: string) {
     if (!menuMobileAberto) {
       setMenuAberto(true);
     }
-    setOpenMenus((current) =>
-      current.includes(label)
-        ? current.filter((item) => item !== label)
-        : [...current, label],
-    );
+
+    setOpenMenus((atuais) => (atuais.includes(label) ? [] : [label]));
+    setOpenSubmenus([]);
   }
 
   function handleMenuAutoScroll(event: React.MouseEvent<HTMLDivElement>) {
@@ -666,9 +789,14 @@ export function DashboardShell({
 
   useEffect(() => {
     if (!menuAberto && !menuMobileAberto) {
+      setOpenMenus([]);
       setOpenSubmenus([]);
     }
   }, [menuAberto, menuMobileAberto]);
+
+  useEffect(() => {
+    return () => cancelarFechamentoMenu();
+  }, []);
 
   useEffect(() => {
     carregarConfiguracoesVisuais();
@@ -689,26 +817,15 @@ export function DashboardShell({
   }, []);
 
   useEffect(() => {
-    const ativo = itensVisiveis.find((item) => {
-      if (item.subitems.length === 0) {
-        return hrefAtivo(pathname, item.href);
-      }
+    if (!menuAberto && !menuMobileAberto) return;
 
-      return item.subitems.some((subitem) => {
-        if (subitem.children?.length) {
-          return subitem.children.some((child) =>
-            hrefSubitemAtivo(pathname, search, child.href),
-          );
-        }
-
-        return hrefSubitemAtivo(pathname, search, subitem.href);
-      });
-    });
-
-    if (ativo) {
-      setOpenMenus((current) => Array.from(new Set([...current, ativo.label])));
-    }
-  }, [pathname, search, itensVisiveis]);
+    setOpenMenus(menuDaPaginaAtual ? [menuDaPaginaAtual.menuLabel] : []);
+    setOpenSubmenus(
+      menuDaPaginaAtual?.submenuLabel
+        ? [menuDaPaginaAtual.submenuLabel]
+        : [],
+    );
+  }, [menuDaPaginaAtual, menuAberto, menuMobileAberto]);
 
   async function carregarMeuStatus() {
     try {
@@ -767,7 +884,7 @@ export function DashboardShell({
   }, []);
 
   return (
-    <div className="flow-shell min-h-screen bg-[#f4f5f7] text-slate-950">
+    <div className="flow-shell min-h-screen text-slate-950" data-flow-shell="gold-master">
       {menuMobileAberto ? (
         <button
           type="button"
@@ -779,19 +896,15 @@ export function DashboardShell({
 
       <aside
         onClick={(event) => event.stopPropagation()}
-        onMouseEnter={() => {
-          if (!menuMobileAberto) setMenuAberto(true);
-        }}
-        onMouseLeave={() => {
-          if (!menuMobileAberto) setMenuAberto(false);
-        }}
-        className={`flow-ios-sidebar fixed inset-y-0 left-0 z-40 flex-col border-r border-white/70 bg-white/85 shadow-[0_18px_55px_rgba(15,23,42,0.10)] backdrop-blur-2xl transition-[width,transform] duration-300 ${
+        onMouseEnter={abrirMenuComFluidez}
+        onMouseLeave={agendarFechamentoMenu}
+        className={`flow-ios-sidebar fixed inset-y-0 left-0 z-40 flex-col transition-[width,transform] duration-300 ${
           menuMobileAberto ? "flex translate-x-0" : "hidden -translate-x-full"
-        } w-[286px] lg:flex lg:translate-x-0 ${menuAberto ? "lg:w-[264px]" : "lg:w-[84px]"}`}
+        } w-[304px] lg:flex lg:translate-x-0 ${menuAberto ? "lg:w-[286px]" : "lg:w-[82px]"}`}
       >
         <div className="flex h-full min-h-0 flex-col">
           <div
-            className={`flex h-[76px] shrink-0 items-center border-b border-slate-200/70 px-4 ${
+            className={`flow-nav-brand flex h-[76px] shrink-0 items-center px-4 ${
               menuVisualAberto ? "justify-between" : "justify-center"
             }`}
           >
@@ -800,14 +913,14 @@ export function DashboardShell({
               onClick={() => {
                 if (menuMobileAberto) {
                   fecharMenuMobile();
-                  return;
                 }
-                setMenuAberto((atual) => !atual);
+                router.push("/dashboard");
               }}
-              className={`flex min-w-0 items-center rounded-2xl transition hover:bg-slate-100/80 ${
+              className={`flow-nav-brand-button flex min-w-0 items-center rounded-2xl transition ${
                 menuVisualAberto ? "gap-3 px-2 py-2" : "p-2"
               }`}
-              title={menuAberto ? "Recolher menu" : "Expandir menu"}
+              title="Ir para o Dashboard"
+              aria-label="Ir para o Dashboard"
             >
               <Image
                 src={menuVisualAberto ? "/logo-slogan.png" : "/logo.png"}
@@ -839,9 +952,9 @@ export function DashboardShell({
           <nav
             ref={menuContentRef}
             onMouseMove={handleMenuAutoScroll}
-            className="min-h-0 flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="min-h-0 flex-1 overflow-y-auto px-2.5 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
-            <div className="space-y-5">
+            <div className="space-y-4">
               {(["rotina", "gestao", "sistema"] as MenuSection[]).map(
                 (secao) => {
                   const itensSecao = itensVisiveis.filter(
@@ -851,13 +964,15 @@ export function DashboardShell({
                   if (itensSecao.length === 0) return null;
 
                   return (
-                    <div key={secao} className="space-y-1.5">
+                    <div key={secao} className="flow-nav-section">
                       {menuVisualAberto ? (
-                        <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
-                          {menuSectionLabels[secao]}
-                        </p>
+                        <div className="flow-nav-section-label">
+                          <span className="flow-nav-section-dot" />
+                          <span>{menuSectionLabels[secao]}</span>
+                          <span className="flow-nav-section-line" />
+                        </div>
                       ) : (
-                        <div className="mx-auto mb-2 h-px w-7 bg-slate-200" />
+                        <div className="flow-nav-section-divider" />
                       )}
 
                       {itensSecao.map((item) => {
@@ -890,9 +1005,15 @@ export function DashboardShell({
                         const temSubitens = item.subitems.length > 0;
 
                         return (
-                          <div key={item.label}>
+                          <div
+                            key={item.label}
+                            className={`flow-nav-group ${
+                              temSubitens && isOpen ? "is-open" : ""
+                            } ${isActive ? "is-active" : ""}`}
+                          >
                             <button
                               type="button"
+                              aria-expanded={temSubitens ? isOpen : undefined}
                               onClick={() => {
                                 if (!temSubitens) {
                                   router.push(item.href);
@@ -901,44 +1022,38 @@ export function DashboardShell({
                                 }
                                 toggleMenu(item.label);
                               }}
-                              className={`group flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-sm font-semibold transition-all duration-200 ${
-                                isActive
-                                  ? "bg-blue-50 text-blue-700 shadow-[inset_0_0_0_1px_rgba(37,99,235,0.08)]"
-                                  : "text-slate-600 hover:bg-slate-100/90 hover:text-slate-950"
-                              } ${
+                              className={`flow-nav-item group ${
+                                isActive ? "is-active" : ""
+                              } ${isOpen ? "is-open" : ""} ${
                                 menuVisualAberto
-                                  ? "justify-start"
-                                  : "justify-center"
+                                  ? "is-expanded"
+                                  : "is-collapsed"
                               }`}
                               title={item.label}
                             >
-                              <span
-                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition ${
-                                  isActive
-                                    ? "bg-blue-600 text-white shadow-sm shadow-blue-500/25"
-                                    : "bg-transparent text-slate-500 group-hover:bg-white group-hover:text-slate-900 group-hover:shadow-sm"
-                                }`}
-                              >
+                              <span className="flow-nav-item-icon">
                                 <Icon className="h-[18px] w-[18px]" />
                               </span>
 
                               {menuVisualAberto ? (
-                                <span className="flex-1 text-left">
+                                <span className="flow-nav-item-label">
                                   {item.label}
                                 </span>
                               ) : null}
 
                               {menuVisualAberto && temSubitens ? (
-                                isOpen ? (
-                                  <ChevronDown className="h-4 w-4 text-slate-400" />
-                                ) : (
-                                  <ChevronRight className="h-4 w-4 text-slate-400" />
-                                )
+                                <span className="flow-nav-item-chevron">
+                                  {isOpen ? (
+                                    <ChevronDown className="h-3.5 w-3.5" />
+                                  ) : (
+                                    <ChevronRight className="h-3.5 w-3.5" />
+                                  )}
+                                </span>
                               ) : null}
                             </button>
 
                             {menuVisualAberto && temSubitens && isOpen ? (
-                              <div className="ml-7 mt-1.5 space-y-1 border-l border-slate-200/80 pl-3">
+                              <div className="flow-nav-children">
                                 {item.subitems.map((subitem) => {
                                   if (subitem.children?.length) {
                                     const filhosVisiveis =
@@ -965,28 +1080,35 @@ export function DashboardShell({
                                     );
 
                                     return (
-                                      <div key={subitem.tab} className="py-0.5">
+                                      <div
+                                        key={subitem.tab}
+                                        className={`flow-nav-subgroup ${
+                                          grupoAberto ? "is-open" : ""
+                                        } ${grupoAtivo ? "is-active" : ""}`}
+                                      >
                                         <button
                                           type="button"
+                                          aria-expanded={grupoAberto}
                                           onClick={() =>
                                             toggleSubmenu(subitem.tab)
                                           }
-                                          className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-[11px] font-bold transition ${
-                                            grupoAtivo
-                                              ? "bg-blue-50 text-blue-700"
-                                              : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
-                                          }`}
+                                          className="flow-nav-subgroup-button"
                                         >
-                                          <span>{subitem.label}</span>
-                                          {grupoAberto ? (
-                                            <ChevronDown className="h-3.5 w-3.5" />
-                                          ) : (
-                                            <ChevronRight className="h-3.5 w-3.5" />
-                                          )}
+                                          <span className="flow-nav-child-marker" />
+                                          <span className="min-w-0 flex-1 truncate">
+                                            {subitem.label}
+                                          </span>
+                                          <span className="flow-nav-subgroup-chevron">
+                                            {grupoAberto ? (
+                                              <ChevronDown className="h-3 w-3" />
+                                            ) : (
+                                              <ChevronRight className="h-3 w-3" />
+                                            )}
+                                          </span>
                                         </button>
 
                                         {grupoAberto ? (
-                                          <div className="mt-1 space-y-1 pl-2">
+                                          <div className="flow-nav-grandchildren">
                                             {filhosVisiveis.map((child) => {
                                               const childAtivo =
                                                 hrefSubitemAtivo(
@@ -1004,13 +1126,16 @@ export function DashboardShell({
                                                   key={`${child.tab}-${child.href}`}
                                                   href={child.href}
                                                   onClick={fecharMenuMobile}
-                                                  className={`block rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                                                  className={`flow-nav-grandchild ${
                                                     childAtivo
-                                                      ? "bg-blue-50 text-blue-700"
-                                                      : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                                                      ? "is-active"
+                                                      : ""
                                                   }`}
                                                 >
-                                                  {child.label}
+                                                  <span className="flow-nav-grandchild-dot" />
+                                                  <span className="min-w-0 flex-1 truncate">
+                                                    {child.label}
+                                                  </span>
                                                 </Link>
                                               );
                                             })}
@@ -1035,13 +1160,15 @@ export function DashboardShell({
                                       key={`${subitem.tab}-${subitem.href}`}
                                       href={subitem.href}
                                       onClick={fecharMenuMobile}
-                                      className={`block rounded-xl px-3 py-2 text-xs font-semibold transition ${
-                                        childAtivo
-                                          ? "bg-blue-50 text-blue-700"
-                                          : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                                      className={`flow-nav-child ${
+                                        childAtivo ? "is-active" : ""
                                       }`}
                                     >
-                                      {subitem.label}
+                                      <span className="flow-nav-child-marker" />
+                                      <span className="min-w-0 flex-1 truncate">
+                                        {subitem.label}
+                                      </span>
+                                      <ChevronRight className="flow-nav-child-chevron h-3 w-3" />
                                     </Link>
                                   );
                                 })}
@@ -1057,11 +1184,11 @@ export function DashboardShell({
             </div>
           </nav>
 
-          <div className="shrink-0 border-t border-slate-200/70 p-3">
+          <div className="flow-nav-footer shrink-0 p-3">
             <button
               type="button"
               onClick={sair}
-              className={`flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-slate-500 transition hover:bg-red-50 hover:text-red-700 ${
+              className={`flow-nav-exit flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-sm font-semibold ${
                 menuVisualAberto ? "justify-start" : "justify-center"
               }`}
               title="Sair"
@@ -1077,8 +1204,8 @@ export function DashboardShell({
 
       <div
         onClick={() => setDropdownAberto(null)}
-        className={`min-h-screen transition-[padding] duration-300 ${
-          menuAberto ? "lg:pl-[264px]" : "lg:pl-[84px]"
+        className={`flow-shell-content min-h-screen transition-[padding] duration-300 ${
+          menuAberto ? "lg:pl-[286px]" : "lg:pl-[82px]"
         }`}
       >
         <header className="flow-ios-topbar sticky top-0 z-20 border-b border-white/80 bg-white/78 backdrop-blur-2xl">
@@ -1087,7 +1214,7 @@ export function DashboardShell({
               type="button"
               onClick={(event) => {
                 event.stopPropagation();
-                setMenuMobileAberto(true);
+                abrirMenuMobile();
               }}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200/80 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 lg:hidden"
               aria-label="Abrir menu"
@@ -1277,7 +1404,7 @@ export function DashboardShell({
           </div>
         ) : null}
 
-        <div onClick={(event) => event.stopPropagation()}>{children}</div>
+        <main className="flow-workspace" onClick={(event) => event.stopPropagation()}>{children}</main>
         {/* NotificacoesPopup desativado temporariamente para teste */}
       </div>
     </div>

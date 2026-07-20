@@ -797,7 +797,8 @@ export async function POST(request: Request) {
 
       if (erroBuscaAtuais) throw new Error(erroBuscaAtuais.message);
 
-      for (const vendaAtual of vendasAtuais || []) {
+      for (const vendaAtualRaw of vendasAtuais || []) {
+        const vendaAtual = vendaAtualRaw as Record<string, any>;
         const placa = texto(vendaAtual.placa).toUpperCase();
 
         if (!placa || preservaveisPorPlaca.has(placa)) continue;

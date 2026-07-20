@@ -29,9 +29,7 @@ import { ConfirmSubmitButton } from "@/components/telefonia/ConfirmSubmitButton"
 type Registro = Record<string, unknown>;
 
 type PageProps = {
-  searchParams?:
-    | Promise<Record<string, string | string[] | undefined>>
-    | Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 type Aba3CX = "monitor" | "ligacoes";
@@ -573,7 +571,7 @@ async function aplicarVinculoLeadNaChamada({
     vinculos.push({
       chamada_id: chamadaId,
       tipo_vinculo: "venda",
-      entidade_id: texto(venda.id),
+      entidade_id: texto(venda?.id),
       vinculado_por: texto(usuarioInterno.id),
       motivo:
         origem === "automatico"
@@ -732,7 +730,7 @@ async function vincularChamadaAutomaticamente(formData: FormData) {
     vinculos.push({
       chamada_id: chamadaId,
       tipo_vinculo: "agendamento",
-      entidade_id: agendamento?.id || venda.agendamento_id,
+      entidade_id: agendamento?.id || venda?.agendamento_id || "",
       vinculado_por: usuarioInterno.id,
       motivo: "Vínculo automático por lead relacionado.",
     });
@@ -915,23 +913,15 @@ function CardResumo({
   };
 
   return (
-    <article className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
+    <article className={`apple-stat-card apple-tint-${tom}`}>
+      <div className="apple-stat-head">
         <div>
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-            {titulo}
-          </p>
-          <p className="mt-3 text-3xl font-black tracking-[-0.05em] text-slate-950">
-            {valor}
-          </p>
-          <p className="mt-1 text-xs font-bold leading-5 text-slate-500">
-            {detalhe}
-          </p>
+          <p className="apple-stat-title">{titulo}</p>
+          <p className="apple-stat-value">{valor}</p>
+          <p className="apple-stat-note">{detalhe}</p>
         </div>
 
-        <div
-          className={`grid h-12 w-12 place-items-center rounded-2xl border ${tons[tom]}`}
-        >
+        <div className={`apple-stat-icon ${tons[tom]}`}>
           <Icon className="h-5 w-5" />
         </div>
       </div>
@@ -940,17 +930,16 @@ function CardResumo({
 }
 
 function Abas({ aba }: { aba: Aba3CX }) {
-  const itemBase =
-    "inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-black transition";
+  const itemBase = "apple-tab";
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="apple-tabbar">
       <Link
         href="/dashboard/3cx"
         className={
           aba === "monitor"
-            ? `${itemBase} bg-slate-950 text-white shadow-lg shadow-slate-900/15`
-            : `${itemBase} border border-slate-200 bg-white text-slate-600 hover:bg-slate-50`
+            ? `${itemBase} is-active`
+            : itemBase
         }
       >
         <Activity className="h-4 w-4" />
@@ -961,8 +950,8 @@ function Abas({ aba }: { aba: Aba3CX }) {
         href="/dashboard/3cx?aba=ligacoes"
         className={
           aba === "ligacoes"
-            ? `${itemBase} bg-slate-950 text-white shadow-lg shadow-slate-900/15`
-            : `${itemBase} border border-slate-200 bg-white text-slate-600 hover:bg-slate-50`
+            ? `${itemBase} is-active`
+            : itemBase
         }
       >
         <PhoneCall className="h-4 w-4" />
@@ -971,7 +960,7 @@ function Abas({ aba }: { aba: Aba3CX }) {
 
       <Link
         href="/dashboard/3cx/historico"
-        className={`${itemBase} border border-slate-200 bg-white text-slate-600 hover:bg-slate-50`}
+        className={itemBase}
       >
         <History className="h-4 w-4" />
         Histórico
@@ -979,7 +968,7 @@ function Abas({ aba }: { aba: Aba3CX }) {
 
       <Link
         href="/dashboard/3cx/classificacoes"
-        className={`${itemBase} border border-slate-200 bg-white text-slate-600 hover:bg-slate-50`}
+        className={itemBase}
       >
         <Tags className="h-4 w-4" />
         Classificações
@@ -987,7 +976,7 @@ function Abas({ aba }: { aba: Aba3CX }) {
 
       <Link
         href="/dashboard/3cx/whatsapp"
-        className={`${itemBase} border border-slate-200 bg-white text-slate-600 hover:bg-slate-50`}
+        className={itemBase}
       >
         <MessageCircle className="h-4 w-4" />
         WhatsApp
@@ -999,7 +988,7 @@ function Abas({ aba }: { aba: Aba3CX }) {
 function Operadores3CX({ operadores }: { operadores: Registro[] }) {
   if (!operadores.length) {
     return (
-      <section className="rounded-[30px] border border-slate-200 bg-white p-8 text-center shadow-sm">
+      <section className="apple-card p-8 text-center">
         <WifiOff className="mx-auto h-10 w-10 text-slate-300" />
         <h2 className="mt-3 text-xl font-black text-slate-950">
           Nenhum operador encontrado
@@ -1013,12 +1002,12 @@ function Operadores3CX({ operadores }: { operadores: Registro[] }) {
   }
 
   return (
-    <section className="rounded-[30px] border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-100 p-5">
-        <h2 className="text-xl font-black tracking-[-0.03em] text-slate-950">
+    <section className="apple-card">
+      <div className="apple-section-head border-b border-slate-100/70">
+        <h2 className="apple-section-title text-[1.35rem]">
           Operadores e ramais
         </h2>
-        <p className="mt-1 text-sm font-semibold text-slate-500">
+        <p className="apple-section-copy">
           Status operacional vindo do Flow e atualizado pelo webhook do 3CX.
         </p>
       </div>
@@ -1036,7 +1025,7 @@ function Operadores3CX({ operadores }: { operadores: Registro[] }) {
           return (
             <article
               key={id || nome}
-              className={`rounded-[26px] border bg-white p-5 shadow-sm ${visual.card}`}
+              className={`apple-list-card border bg-white/85 p-5 ${visual.card}`}
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
@@ -1104,10 +1093,12 @@ function MonitorView({
   usuarios,
   chamadas,
   integracaoAtiva,
+  avisoVinculo,
 }: {
   usuarios: Registro[];
   chamadas: Registro[];
   integracaoAtiva: boolean;
+  avisoVinculo: string;
 }) {
   const operadoresComRamal = usuarios.filter((usuario) =>
     texto(usuario.ramal_3cx),
@@ -1182,7 +1173,7 @@ function MonitorView({
           </div>
         </section>
       ) : null}
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+      <section className="apple-kpi-grid cols-6">
         <CardResumo
           titulo="Ligações hoje"
           valor={chamadasHoje.length}
@@ -1228,7 +1219,7 @@ function MonitorView({
       </section>
 
       {operadoresSemRamal > 0 ? (
-        <section className="rounded-[26px] border border-orange-200 bg-orange-50 p-5">
+        <section className="apple-soft-card apple-tint-orange p-5">
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-orange-700" />
             <div>
@@ -1248,14 +1239,14 @@ function MonitorView({
         <div className="space-y-5">
           <Operadores3CX operadores={usuarios} />
 
-          <section className="rounded-[30px] border border-slate-200 bg-white shadow-sm">
+          <section className="apple-card">
             <div className="flex flex-col justify-between gap-3 border-b border-slate-100 p-5 lg:flex-row lg:items-center">
               <div>
                 <h2 className="flex items-center gap-2 text-xl font-black tracking-[-0.03em] text-slate-950">
                   <PhoneCall className="h-5 w-5 text-blue-700" />
                   Últimas chamadas reais
                 </h2>
-                <p className="mt-1 text-sm font-semibold text-slate-500">
+                <p className="apple-section-copy">
                   Chamadas salvas em telefonia_chamadas.
                 </p>
               </div>
@@ -1475,7 +1466,7 @@ function LigacoesView({
 
   return (
     <div className="space-y-5">
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+      <section className="apple-kpi-grid cols-6">
         <CardResumo
           titulo="Ligações hoje"
           valor={chamadasHoje.length}
@@ -1523,10 +1514,10 @@ function LigacoesView({
       <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-start">
           <div>
-            <h2 className="text-xl font-black tracking-[-0.03em] text-slate-950">
+            <h2 className="apple-section-title text-[1.35rem]">
               Filtros de ligações
             </h2>
-            <p className="mt-1 text-sm font-semibold text-slate-500">
+            <p className="apple-section-copy">
               Agora esta tela usa a tabela real telefonia_chamadas.
             </p>
           </div>
@@ -1623,7 +1614,7 @@ function LigacoesView({
       </section>
 
       {chamadasSemClassificacao.length > 0 ? (
-        <section className="rounded-[26px] border border-orange-200 bg-orange-50 p-5">
+        <section className="apple-soft-card apple-tint-orange p-5">
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-orange-700" />
             <div>
@@ -1640,13 +1631,13 @@ function LigacoesView({
         </section>
       ) : null}
 
-      <section className="rounded-[30px] border border-slate-200 bg-white shadow-sm">
+      <section className="apple-card">
         <div className="flex flex-col justify-between gap-3 border-b border-slate-100 p-5 lg:flex-row lg:items-center">
           <div>
-            <h2 className="text-xl font-black tracking-[-0.03em] text-slate-950">
+            <h2 className="apple-section-title text-[1.35rem]">
               Lista de ligações reais
             </h2>
-            <p className="mt-1 text-sm font-semibold text-slate-500">
+            <p className="apple-section-copy">
               Registros vindos de telefonia_chamadas.
             </p>
           </div>
@@ -1927,8 +1918,9 @@ function LigacoesView({
 }
 
 export default async function Page({ searchParams }: PageProps) {
-  const params = await Promise.resolve(searchParams || {});
+  const params: Record<string, string | string[] | undefined> = (await searchParams) ?? {};
   const aba = pegarAba(params.aba);
+  const avisoVinculo = parametro(params.msg_vinculo);
 
   const supabase = await createClient();
 
@@ -1992,20 +1984,19 @@ export default async function Page({ searchParams }: PageProps) {
   const integracaoAtiva = booleano((integracao3CX as Registro | null)?.ativo);
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-[1760px] space-y-5">
-        <section className="overflow-hidden rounded-[34px] border border-slate-200 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.06)]">
-          <div className="grid gap-0 xl:grid-cols-[1fr_380px]">
-            <div className="p-6 lg:p-7">
+    <main className="flow-premium-page apple-page-shell text-slate-950">
+      <div className="apple-page-stack">
+        <section className="apple-surface apple-hero">
+          <div className="apple-hero-main">
               <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-start">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-700">
+                  <p className="apple-eyebrow">
                     Central telefônica
                   </p>
-                  <h1 className="mt-2 text-3xl font-black tracking-[-0.05em] text-slate-950 lg:text-4xl">
+                  <h1 className="apple-title text-4xl lg:text-[3rem]">
                     Controle 3CX
                   </h1>
-                  <p className="mt-3 max-w-4xl text-sm font-semibold leading-6 text-slate-600">
+                  <p className="apple-copy max-w-4xl">
                     Monitor operacional de ramais, ligações reais, histórico e
                     classificação.
                   </p>
@@ -2013,7 +2004,7 @@ export default async function Page({ searchParams }: PageProps) {
 
                 <Link
                   href="/dashboard/configuracoes/integracoes"
-                  className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-sm font-black text-white shadow-lg shadow-blue-700/20 hover:bg-blue-800"
+                  className="apple-btn-primary shrink-0"
                 >
                   Configurar integração
                   <ArrowRight className="h-4 w-4" />
@@ -2025,7 +2016,7 @@ export default async function Page({ searchParams }: PageProps) {
               </div>
             </div>
 
-            <div className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-6 text-white">
+            <div className="apple-hero-side">
               <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-blue-500/20 blur-3xl" />
               <div className="absolute -bottom-20 left-10 h-52 w-52 rounded-full bg-cyan-400/10 blur-3xl" />
 
@@ -2046,7 +2037,6 @@ export default async function Page({ searchParams }: PageProps) {
                 </p>
               </div>
             </div>
-          </div>
         </section>
 
         {aba === "ligacoes" ? (
@@ -2061,6 +2051,7 @@ export default async function Page({ searchParams }: PageProps) {
             usuarios={usuariosNormalizados}
             chamadas={chamadasNormalizadas}
             integracaoAtiva={integracaoAtiva}
+            avisoVinculo={avisoVinculo}
           />
         )}
       </div>

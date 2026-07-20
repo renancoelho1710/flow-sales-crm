@@ -98,7 +98,7 @@ export default async function Page() {
   const lista = (auditorias || []) as Auditoria[];
 
   return (
-    <main className="min-h-screen bg-slate-50 px-5 py-5 text-slate-950 lg:px-8 lg:py-7">
+    <main className="flow-premium-page min-h-screen bg-slate-50 px-5 py-5 text-slate-950 lg:px-8 lg:py-7">
       <div className="mx-auto max-w-[1500px] space-y-5">
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-end">

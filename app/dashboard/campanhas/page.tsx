@@ -902,7 +902,7 @@ export default function CampanhasPage() {
   }
   if (carregando) {
     return (
-      <main className="grid min-h-[70vh] place-items-center">
+      <main className="flow-premium-page grid min-h-[70vh] place-items-center">
         <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
           <Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-700" />
           <p className="mt-3 text-sm font-black text-slate-700">
@@ -914,7 +914,7 @@ export default function CampanhasPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-950 sm:px-6 lg:px-8">
+    <main className="flow-premium-page min-h-screen bg-slate-50 px-4 py-6 text-slate-950 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1700px] space-y-6">
         <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-end">

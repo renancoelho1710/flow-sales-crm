@@ -1,8 +1,7 @@
 "use client";
 
-import { CampanhaAtivaResumo } from "@/components/dashboard/CampanhaAtivaResumo";
-
 import Link from "next/link";
+import styles from "./DashboardOverview.module.css";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -168,13 +167,7 @@ function PremiumCard({
   children: React.ReactNode;
   className?: string;
 }) {
-  return (
-    <section
-      className={`rounded-[28px] border border-slate-200/80 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.06)] ${className}`}
-    >
-      {children}
-    </section>
-  );
+  return <section className={`flow-ios-surface ${className}`}>{children}</section>;
 }
 
 function KpiCard({
@@ -192,35 +185,25 @@ function KpiCard({
   tom: "blue" | "emerald" | "orange" | "red" | "purple" | "slate";
   href: string;
 }) {
-  const tons = {
-    blue: "from-blue-50 to-sky-50 text-blue-700 border-blue-100",
-    emerald: "from-emerald-50 to-green-50 text-emerald-700 border-emerald-100",
-    orange: "from-orange-50 to-amber-50 text-orange-700 border-orange-100",
-    red: "from-red-50 to-rose-50 text-red-700 border-red-100",
-    purple: "from-violet-50 to-purple-50 text-violet-700 border-violet-100",
-    slate: "from-slate-50 to-slate-100 text-slate-700 border-slate-200",
-  }[tom];
-
   return (
     <Link
       href={href}
-      className="group rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-950/5"
+      className={`flow-ios-kpi flow-ios-kpi--${tom} group`}
+      aria-label={`${titulo}: ${valor}`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-            {titulo}
-          </p>
-          <p className="mt-2 text-3xl font-black tracking-[-0.06em] text-slate-950">
-            {valor}
-          </p>
-          <p className="mt-1 text-xs font-bold text-slate-500">{detalhe}</p>
+      <span className="flow-ios-kpi-glow" aria-hidden="true" />
+      <div className="relative z-10 min-w-0">
+        <p className="flow-ios-eyebrow">{titulo}</p>
+        <p className="mt-2 truncate text-[1.85rem] font-semibold tracking-[-0.055em] text-slate-950">
+          {valor}
+        </p>
+        <div className="mt-1 flex min-w-0 items-center gap-1.5">
+          <p className="truncate text-xs font-medium text-slate-500">{detalhe}</p>
+          <ChevronRight className="flow-ios-kpi-open h-3.5 w-3.5 shrink-0" />
         </div>
-        <div
-          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border bg-gradient-to-br ${tons}`}
-        >
-          <Icon className="h-5 w-5" />
-        </div>
+      </div>
+      <div className="flow-ios-kpi-icon relative z-10">
+        <Icon className="h-[18px] w-[18px]" strokeWidth={1.85} />
       </div>
     </Link>
   );
@@ -728,10 +711,7 @@ function DashboardOperador({ data }: { data: DashboardData }) {
   const resumo = data.resumo;
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
-      <div className="mb-10">
-        <CampanhaAtivaResumo />
-      </div>
+    <main className="flow-premium-page min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1760px] space-y-5">
         <section className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
           <div>
@@ -819,10 +799,7 @@ function DashboardGestao({ data }: { data: DashboardData }) {
   const progressoEquipe = limitarPercentual(metas?.percentual_mes);
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
-      <div className="mb-10">
-        <CampanhaAtivaResumo />
-      </div>
+    <main className="flow-premium-page min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1760px] space-y-5">
         <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.06)]">
           <div className="grid gap-0 xl:grid-cols-[1fr_360px]">
@@ -1042,130 +1019,511 @@ function DashboardGestao({ data }: { data: DashboardData }) {
   );
 }
 
+type OverviewTone = "blue" | "green" | "orange" | "red" | "purple" | "graphite";
+
+function overviewToneClass(tom: OverviewTone) {
+  const classes: Record<OverviewTone, string> = {
+    blue: styles.toneBlue,
+    green: styles.toneGreen,
+    orange: styles.toneOrange,
+    red: styles.toneRed,
+    purple: styles.tonePurple,
+    graphite: styles.toneGraphite,
+  };
+
+  return classes[tom];
+}
+
+function OverviewMetricCard({
+  titulo,
+  valor,
+  detalhe,
+  icon: Icon,
+  tom,
+  href,
+}: {
+  titulo: string;
+  valor: string | number;
+  detalhe: string;
+  icon: any;
+  tom: OverviewTone;
+  href: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`${styles.metricCard} ${overviewToneClass(tom)}`}
+      aria-label={`${titulo}: ${valor}`}
+    >
+      <div className={styles.metricCardHeader}>
+        <span>{titulo}</span>
+        <span className={styles.metricIcon}>
+          <Icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
+        </span>
+      </div>
+      <strong>{valor}</strong>
+      <div className={styles.metricCardFooter}>
+        <span>{detalhe}</span>
+        <ChevronRight className="h-4 w-4" />
+      </div>
+    </Link>
+  );
+}
+
+function OverviewEvolutionPanel({ serie = [] }: { serie?: DashboardData["serie"] }) {
+  const itens = serie || [];
+  const totalAgendamentos = itens.reduce(
+    (total, item) => total + Number(item.agendamentos || 0),
+    0,
+  );
+  const totalVendas = itens.reduce(
+    (total, item) => total + Number(item.vendas || 0),
+    0,
+  );
+  const conversao = totalAgendamentos
+    ? Math.round((totalVendas / totalAgendamentos) * 100)
+    : 0;
+  const maximo = Math.max(
+    1,
+    ...itens.flatMap((item) => [item.agendamentos, item.vendas]),
+  );
+  const dias = itens.length
+    ? itens
+    : [
+        { data: "seg", label: "SEG", agendamentos: 0, vendas: 0 },
+        { data: "ter", label: "TER", agendamentos: 0, vendas: 0 },
+        { data: "qua", label: "QUA", agendamentos: 0, vendas: 0 },
+        { data: "qui", label: "QUI", agendamentos: 0, vendas: 0 },
+        { data: "sex", label: "SEX", agendamentos: 0, vendas: 0 },
+        { data: "sab", label: "SÁB", agendamentos: 0, vendas: 0 },
+        { data: "dom", label: "DOM", agendamentos: 0, vendas: 0 },
+      ];
+  const semMovimento = totalAgendamentos === 0 && totalVendas === 0;
+
+  return (
+    <section className={styles.panel}>
+      <header className={styles.panelHeader}>
+        <div className={styles.panelTitleGroup}>
+          <span className={`${styles.panelIcon} ${styles.panelIconBlue}`}>
+            <Gauge className="h-5 w-5" strokeWidth={1.8} />
+          </span>
+          <div>
+            <p>Evolução comercial</p>
+            <h2>Agendamentos e vendas</h2>
+          </div>
+        </div>
+        <div className={styles.panelHeaderActions}>
+          <span className={styles.periodPill}>
+            <Clock3 className="h-4 w-4" /> 7 dias
+          </span>
+          <Link href="/dashboard/relatorios" className={styles.textAction}>
+            Relatórios <ChevronRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </header>
+
+      <div className={styles.chartSummary}>
+        <div>
+          <span>Agendamentos</span>
+          <strong>{totalAgendamentos}</strong>
+        </div>
+        <div>
+          <span>Vendas confirmadas</span>
+          <strong>{totalVendas}</strong>
+        </div>
+        <div>
+          <span>Conversão</span>
+          <strong>{conversao}%</strong>
+        </div>
+      </div>
+
+      <div className={styles.chartArea}>
+        <div className={styles.chartLines} aria-hidden="true">
+          <span />
+          <span />
+          <span />
+          <span />
+        </div>
+
+        {semMovimento ? (
+          <div className={styles.chartEmpty}>
+            <span>
+              <CalendarCheck2 className="h-5 w-5" strokeWidth={1.8} />
+            </span>
+            <strong>Semana pronta para ganhar movimento</strong>
+            <p>Agendamentos e vendas aparecem aqui automaticamente.</p>
+          </div>
+        ) : null}
+
+        <div className={`${styles.chartColumns} ${semMovimento ? styles.chartColumnsMuted : ""}`}>
+          {dias.map((item) => {
+            const alturaAg = Math.max(
+              item.agendamentos > 0 ? 10 : 2,
+              (item.agendamentos / maximo) * 100,
+            );
+            const alturaVendas = Math.max(
+              item.vendas > 0 ? 10 : 2,
+              (item.vendas / maximo) * 100,
+            );
+
+            return (
+              <div key={item.data} className={styles.chartDay}>
+                <div className={styles.chartBars}>
+                  <div
+                    className={`${styles.chartBar} ${styles.chartBarBlue}`}
+                    style={{ height: `${alturaAg}%` }}
+                    title={`${item.agendamentos} agendamento(s)`}
+                  />
+                  <div
+                    className={`${styles.chartBar} ${styles.chartBarGreen}`}
+                    style={{ height: `${alturaVendas}%` }}
+                    title={`${item.vendas} venda(s)`}
+                  />
+                </div>
+                <span>{item.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <footer className={styles.chartFooter}>
+        <div className={styles.legend}>
+          <span><i className={styles.legendBlue} /> Agendamentos</span>
+          <span><i className={styles.legendGreen} /> Vendas confirmadas</span>
+        </div>
+        <span className={styles.autoUpdate}>
+          <CheckCircle2 className="h-4 w-4" /> Atualização automática
+        </span>
+      </footer>
+    </section>
+  );
+}
+
+function OverviewTeamPanel({ data }: { data: DashboardData }) {
+  const equipe = data.equipe || [];
+  const status = data.status_equipe;
+  const disponiveis = Number(status?.disponiveis || 0);
+  const ocupados = Number(status?.ocupados || 0);
+  const pausas = Number(status?.pausas || 0);
+  const offline = Number(status?.offline || 0);
+  const ativos = disponiveis + ocupados + pausas;
+  const total = status ? ativos + offline : equipe.length;
+
+  const statusCards: Array<{
+    label: string;
+    valor: number;
+    tom: OverviewTone;
+  }> = [
+    { label: "Disponíveis", valor: disponiveis, tom: "green" },
+    { label: "Ocupados", valor: ocupados, tom: "blue" },
+    { label: "Pausas", valor: pausas, tom: "orange" },
+    { label: "Offline", valor: offline, tom: "graphite" },
+  ];
+
+  return (
+    <section className={styles.panel}>
+      <header className={styles.panelHeader}>
+        <div className={styles.panelTitleGroup}>
+          <span className={`${styles.panelIcon} ${styles.panelIconPurple}`}>
+            <Users className="h-5 w-5" strokeWidth={1.8} />
+          </span>
+          <div>
+            <p>Equipe em tempo real</p>
+            <h2>Progresso dos colaboradores</h2>
+          </div>
+        </div>
+        <Link href="/dashboard/configuracoes/metas" className={styles.primarySmallAction}>
+          Configurar metas <ChevronRight className="h-4 w-4" />
+        </Link>
+      </header>
+
+      <div className={styles.liveStatus}>
+        <div>
+          <i />
+          <span><strong>{ativos}</strong> ativos agora</span>
+        </div>
+        <span>{total} no painel</span>
+      </div>
+
+      <div className={styles.teamStatusGrid}>
+        {statusCards.map((item) => (
+          <div
+            key={item.label}
+            className={`${styles.teamStatusCard} ${overviewToneClass(item.tom)}`}
+          >
+            <strong>{item.valor}</strong>
+            <span>{item.label}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className={styles.teamList}>
+        {equipe.length ? (
+          equipe.slice(0, 4).map((membro) => {
+            const progresso = limitarPercentual(membro.progresso);
+            return (
+              <article key={membro.id} className={styles.teamMember}>
+                <div className={styles.teamMemberTop}>
+                  <div className={styles.teamAvatar} aria-hidden="true">
+                    {membro.nome.trim().charAt(0).toUpperCase() || "C"}
+                  </div>
+                  <div className={styles.teamMemberIdentity}>
+                    <strong>{membro.nome}</strong>
+                    <span>
+                      {membro.agendamentos_mes}/{membro.meta_mensal_agendamentos} agendamentos · {membro.vendas_mes} venda(s)
+                    </span>
+                  </div>
+                  <span className={styles.teamMemberStatus}>
+                    {statusTexto(membro.status_operacional)}
+                  </span>
+                </div>
+                <div className={styles.teamProgress}>
+                  <div style={{ width: `${progresso}%` }} />
+                </div>
+              </article>
+            );
+          })
+        ) : (
+          <div className={styles.teamEmpty}>
+            <Users className="h-5 w-5" />
+            <div>
+              <strong>Equipe sincronizada</strong>
+              <span>Os colaboradores aparecem aqui quando entrarem na operação.</span>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function DashboardGeralGestao({ data }: { data: DashboardData }) {
   const resumo = data.resumo;
   const metas = data.metas;
   const progressoEquipe = limitarPercentual(metas?.percentual_mes);
+  const primeiroNome = data.usuario?.nome?.trim().split(/\s+/)[0] || "equipe";
+  const disponiveis = Number(data.status_equipe?.disponiveis || 0);
+
+  const prioridade = (() => {
+    const atrasadas = Number(resumo?.proximas_acoes_atrasadas || 0);
+    const semContato = Number(resumo?.leads_sem_contato || 0);
+    const vendasPendentes = Number(resumo?.vendas_pendentes || 0);
+
+    if (atrasadas > 0) {
+      return {
+        titulo: `${atrasadas} ${atrasadas === 1 ? "ação atrasada" : "ações atrasadas"}`,
+        detalhe: "Contatos fora do prazo precisam ser resolvidos primeiro.",
+        href: "/dashboard/leads/tarefas",
+        acao: "Resolver agora",
+        icon: AlertTriangle,
+        tom: "orange" as OverviewTone,
+      };
+    }
+
+    if (semContato > 0) {
+      return {
+        titulo: `${semContato} ${semContato === 1 ? "lead sem contato" : "leads sem contato"}`,
+        detalhe: "A primeira abordagem ainda não aconteceu.",
+        href: "/dashboard/leads?filtro=sem-contato",
+        acao: "Abrir fila",
+        icon: PhoneCall,
+        tom: "red" as OverviewTone,
+      };
+    }
+
+    if (vendasPendentes > 0) {
+      return {
+        titulo: `${vendasPendentes} ${vendasPendentes === 1 ? "venda aguardando validação" : "vendas aguardando validação"}`,
+        detalhe: "Valide os resultados para manter a operação atualizada.",
+        href: "/dashboard/vendas/pendentes",
+        acao: "Conferir vendas",
+        icon: WalletCards,
+        tom: "blue" as OverviewTone,
+      };
+    }
+
+    return {
+      titulo: "Operação organizada",
+      detalhe: "Nenhuma pendência crítica neste momento.",
+      href: "/dashboard/relatorios",
+      acao: "Ver desempenho",
+      icon: ShieldCheck,
+      tom: "green" as OverviewTone,
+    };
+  })();
+
+  const PrioridadeIcon = prioridade.icon;
+
+  const heroIndicators = [
+    {
+      titulo: "Leads ativos",
+      valor: resumo?.leads_ativos || 0,
+      detalhe: "Em atendimento",
+      href: "/dashboard/leads",
+      icon: Users,
+      tom: "blue" as OverviewTone,
+    },
+    {
+      titulo: "Agenda hoje",
+      valor: resumo?.agendamentos_hoje || 0,
+      detalhe: "Visitas e retornos",
+      href: "/dashboard/agenda",
+      icon: CalendarCheck2,
+      tom: "green" as OverviewTone,
+    },
+    {
+      titulo: "Vendas pendentes",
+      valor: resumo?.vendas_pendentes || 0,
+      detalhe: "Aguardam validação",
+      href: "/dashboard/vendas/pendentes",
+      icon: WalletCards,
+      tom: "orange" as OverviewTone,
+    },
+    {
+      titulo: "Confirmadas",
+      valor: resumo?.vendas_confirmadas || 0,
+      detalhe: "Resultado validado",
+      href: "/dashboard/relatorios",
+      icon: CheckCircle2,
+      tom: "purple" as OverviewTone,
+    },
+  ];
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
-      <div className="mb-10">
-        <CampanhaAtivaResumo />
-      </div>
-      <div className="mx-auto max-w-[1760px] space-y-5">
-        <section className="grid gap-5 xl:grid-cols-[1fr_380px]">
-          <PremiumCard className="overflow-hidden p-6 lg:p-7">
-            <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-700">
-                  Visão geral
-                </p>
-                <h1 className="mt-2 text-3xl font-black tracking-[-0.05em] text-slate-950">
-                  Resumo executivo da operação
-                </h1>
-                <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-600">
-                  Uma leitura rápida da empresa: volume de leads, agenda,
-                  vendas, pendências e evolução da meta.
-                </p>
+    <main className={styles.page}>
+      <div className={styles.shell}>
+        <section className={styles.hero}>
+          <div className={styles.heroMain}>
+            <header className={styles.heroChrome}>
+              <div className={styles.heroChromeTitle}>
+                <span className={styles.systemDot} />
+                <span>Central de operação</span>
               </div>
-              <Link
-                href="/dashboard/c2s"
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-sm font-black text-white shadow-lg shadow-blue-700/20"
-              >
-                Importar base <ArrowRight className="h-4 w-4" />
+              <div className={styles.heroChromeStatus}>
+                <span><ShieldCheck className="h-4 w-4" /> Sistema atualizado</span>
+                <span><Users className="h-4 w-4" /> {disponiveis} disponíveis</span>
+              </div>
+            </header>
+
+            <div className={styles.heroIntro}>
+              <p>Visão geral</p>
+              <h1>Olá, {primeiroNome}.</h1>
+              <h2>Sua operação, em uma única visão.</h2>
+              <span>
+                O que precisa de decisão aparece primeiro. O restante continua
+                organizado, sem ruído e sem abrir várias telas.
+              </span>
+            </div>
+
+            <div className={`${styles.priorityCard} ${overviewToneClass(prioridade.tom)}`}>
+              <span className={styles.priorityIcon}>
+                <PrioridadeIcon className="h-5 w-5" strokeWidth={1.9} />
+              </span>
+              <div className={styles.priorityCopy}>
+                <p>Prioridade agora</p>
+                <strong>{prioridade.titulo}</strong>
+                <span>{prioridade.detalhe}</span>
+              </div>
+              <Link href={prioridade.href} className={styles.priorityAction}>
+                {prioridade.acao} <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
 
-            <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-3xl bg-blue-50 p-4">
-                <p className="text-[10px] font-black uppercase text-blue-700">
-                  Leads ativos
-                </p>
-                <p className="mt-2 text-3xl font-black">
-                  {resumo?.leads_ativos || 0}
-                </p>
-                <p className="mt-1 text-xs font-bold text-blue-700">
-                  Base em atendimento
-                </p>
+            <div className={styles.heroActionRow}>
+              <div className={styles.heroActions}>
+                <Link href="/dashboard/c2s" className={styles.primaryAction}>
+                  Sincronizar base <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link href="/dashboard/relatorios" className={styles.secondaryAction}>
+                  Ver desempenho
+                </Link>
+                <Link href="/dashboard/agenda" className={styles.secondaryAction}>
+                  Abrir agenda
+                </Link>
               </div>
-              <div className="rounded-3xl bg-sky-50 p-4">
-                <p className="text-[10px] font-black uppercase text-sky-700">
-                  Agenda hoje
-                </p>
-                <p className="mt-2 text-3xl font-black">
-                  {resumo?.agendamentos_hoje || 0}
-                </p>
-                <p className="mt-1 text-xs font-bold text-sky-700">
-                  Visitas e retornos
-                </p>
-              </div>
-              <div className="rounded-3xl bg-orange-50 p-4">
-                <p className="text-[10px] font-black uppercase text-orange-700">
-                  Vendas pendentes
-                </p>
-                <p className="mt-2 text-3xl font-black">
-                  {resumo?.vendas_pendentes || 0}
-                </p>
-                <p className="mt-1 text-xs font-bold text-orange-700">
-                  Validação ADM
-                </p>
-              </div>
-              <div className="rounded-3xl bg-emerald-50 p-4">
-                <p className="text-[10px] font-black uppercase text-emerald-700">
-                  Confirmadas
-                </p>
-                <p className="mt-2 text-3xl font-black">
-                  {resumo?.vendas_confirmadas || 0}
-                </p>
-                <p className="mt-1 text-xs font-bold text-emerald-700">
-                  Resultado validado
-                </p>
-              </div>
+              <span className={styles.intelligenceLabel}>
+                <Sparkles className="h-4 w-4" /> Priorização automática por impacto
+              </span>
             </div>
-          </PremiumCard>
 
-          <PremiumCard className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-6 text-white">
-            <Confetes ativo={progressoEquipe >= 100} />
-            <div className="relative z-10">
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-200">
-                Meta geral
-              </p>
-              <p className="mt-3 text-6xl font-black tracking-[-0.08em]">
-                {progressoEquipe}%
-              </p>
-              <p className="mt-3 text-sm font-bold leading-6 text-blue-100">
-                {metas?.mensagem || "Acompanhando a meta da operação."}
-              </p>
-              <div className="mt-5 h-4 overflow-hidden rounded-full bg-white/15">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-emerald-300"
-                  style={{ width: `${progressoEquipe}%` }}
-                />
+            <div className={styles.heroMetrics}>
+              {heroIndicators.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.titulo}
+                    href={item.href}
+                    className={`${styles.heroMetric} ${overviewToneClass(item.tom)}`}
+                  >
+                    <span className={styles.heroMetricIcon}>
+                      <Icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
+                    </span>
+                    <div>
+                      <span>{item.titulo}</span>
+                      <strong>{item.valor}</strong>
+                      <small>{item.detalhe}</small>
+                    </div>
+                    <ChevronRight className="h-4 w-4" />
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          <aside className={styles.goalCard}>
+            <div className={styles.goalGlow} aria-hidden="true" />
+            <header className={styles.goalHeader}>
+              <div>
+                <p>Ritmo mensal</p>
+                <h2>Meta da operação</h2>
               </div>
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                <div className="rounded-2xl bg-white/10 p-3">
-                  <p className="text-[10px] font-black uppercase text-cyan-100">
-                    Ag. mês
-                  </p>
-                  <p className="text-2xl font-black">
-                    {resumo?.agendamentos_mes || 0}
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-white/10 p-3">
-                  <p className="text-[10px] font-black uppercase text-cyan-100">
-                    Meta
-                  </p>
-                  <p className="text-2xl font-black">
-                    {metas?.mensal_agendamentos || 0}
-                  </p>
-                </div>
+              <div
+                className={styles.goalRing}
+                style={{
+                  background: `conic-gradient(#69c8ff ${progressoEquipe * 3.6}deg, rgba(255,255,255,.12) 0deg)`,
+                }}
+                aria-label={`${progressoEquipe}% da meta mensal`}
+              >
+                <div><strong>{progressoEquipe}%</strong></div>
+              </div>
+            </header>
+
+            <div className={styles.goalInsight}>
+              <span><Sparkles className="h-4 w-4" /> Leitura inteligente</span>
+              <p>{metas?.mensagem || "Acompanhando a evolução da operação."}</p>
+            </div>
+
+            <div className={styles.goalProgress}>
+              <div style={{ width: `${progressoEquipe}%` }} />
+            </div>
+
+            <div className={styles.goalStats}>
+              <div>
+                <span>Agendamentos</span>
+                <strong>{resumo?.agendamentos_mes || 0}</strong>
+              </div>
+              <div>
+                <span>Meta mensal</span>
+                <strong>{metas?.mensal_agendamentos || 0}</strong>
+              </div>
+              <div>
+                <span>Equipe disponível</span>
+                <strong>{disponiveis}</strong>
               </div>
             </div>
-          </PremiumCard>
+
+            <div className={styles.goalFooter}>
+              <span><i /> Sincronizado agora</span>
+              <Link href="/dashboard/configuracoes/metas">
+                Ajustar metas <ChevronRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </aside>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-          <KpiCard
+        <section className={styles.metricGrid}>
+          <OverviewMetricCard
             titulo="Semana"
             valor={resumo?.agendamentos_semana || 0}
             detalhe="Ritmo comercial"
@@ -1173,7 +1531,7 @@ function DashboardGeralGestao({ data }: { data: DashboardData }) {
             tom="purple"
             href="/dashboard/agenda?periodo=semana"
           />
-          <KpiCard
+          <OverviewMetricCard
             titulo="Sem contato"
             valor={resumo?.leads_sem_contato || 0}
             detalhe="Primeira abordagem"
@@ -1181,43 +1539,43 @@ function DashboardGeralGestao({ data }: { data: DashboardData }) {
             tom="red"
             href="/dashboard/leads?filtro=sem-contato"
           />
-          <KpiCard
+          <OverviewMetricCard
             titulo="Atrasadas"
             valor={resumo?.proximas_acoes_atrasadas || 0}
-            detalhe="Ações críticas"
+            detalhe="Resolver primeiro"
             icon={AlertTriangle}
             tom="orange"
             href="/dashboard/leads/tarefas"
           />
-          <KpiCard
+          <OverviewMetricCard
             titulo="Comissão prevista"
             valor={formatarDinheiro(resumo?.comissao_prevista)}
             detalhe="Pendente de validação"
             icon={Gift}
-            tom="slate"
+            tom="graphite"
             href="/dashboard/relatorios"
           />
-          <KpiCard
-            titulo="Kanban"
+          <OverviewMetricCard
+            titulo="Funil"
             valor="Abrir"
-            detalhe="Funil comercial"
+            detalhe="Atendimentos"
             icon={WalletCards}
             tom="blue"
             href="/dashboard/kanban"
           />
-          <KpiCard
+          <OverviewMetricCard
             titulo="Agenda"
             valor="Ver"
-            detalhe="Calendário operacional"
+            detalhe="Calendário"
             icon={CalendarCheck2}
-            tom="emerald"
+            tom="green"
             href="/dashboard/agenda"
           />
         </section>
 
-        <section className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
-          <GraficoEvolucao serie={data.serie} />
-          <PainelEquipe data={data} />
+        <section className={styles.lowerGrid}>
+          <OverviewEvolutionPanel serie={data.serie} />
+          <OverviewTeamPanel data={data} />
         </section>
       </div>
     </main>
@@ -1228,10 +1586,7 @@ function DashboardOperacionalGestao({ data }: { data: DashboardData }) {
   const resumo = data.resumo;
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
-      <div className="mb-10">
-        <CampanhaAtivaResumo />
-      </div>
+    <main className="flow-premium-page min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1760px] space-y-5">
         <section className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
           <div>
@@ -1387,10 +1742,7 @@ function DashboardEstrategicoGestao({ data }: { data: DashboardData }) {
   );
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
-      <div className="mb-10">
-        <CampanhaAtivaResumo />
-      </div>
+    <main className="flow-premium-page min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1760px] space-y-5">
         <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.06)]">
           <div className="grid gap-0 xl:grid-cols-[1fr_380px]">
@@ -1510,10 +1862,7 @@ function DashboardEstrategicoGestao({ data }: { data: DashboardData }) {
 function DashboardOperacionalOperador({ data }: { data: DashboardData }) {
   const resumo = data.resumo;
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
-      <div className="mb-10">
-        <CampanhaAtivaResumo />
-      </div>
+    <main className="flow-premium-page min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1760px] space-y-5">
         <section className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
           <div>
@@ -1590,10 +1939,7 @@ function DashboardOperacionalOperador({ data }: { data: DashboardData }) {
 
 function DashboardEstrategicoOperador({ data }: { data: DashboardData }) {
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
-      <div className="mb-10">
-        <CampanhaAtivaResumo />
-      </div>
+    <main className="flow-premium-page min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1760px] space-y-5">
         <section>
           <p className="text-xs font-black uppercase tracking-[0.28em] text-violet-700">
@@ -1668,10 +2014,7 @@ export function DashboardClient({
 
   if (carregando) {
     return (
-      <main className="grid min-h-screen place-items-center bg-slate-50 px-4 text-slate-950">
-        <div className="mb-10">
-          <CampanhaAtivaResumo />
-        </div>
+      <main className="flow-premium-page grid min-h-screen place-items-center bg-slate-50 px-4 text-slate-950">
         <div className="rounded-[28px] border border-slate-200 bg-white px-8 py-7 text-center shadow-xl">
           <Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-700" />
           <p className="mt-3 text-sm font-black text-slate-600">
@@ -1684,10 +2027,7 @@ export function DashboardClient({
 
   if (erro || !data) {
     return (
-      <main className="grid min-h-screen place-items-center bg-slate-50 px-4 text-slate-950">
-        <div className="mb-10">
-          <CampanhaAtivaResumo />
-        </div>
+      <main className="flow-premium-page grid min-h-screen place-items-center bg-slate-50 px-4 text-slate-950">
         <div className="max-w-lg rounded-[28px] border border-red-200 bg-red-50 px-8 py-7 text-center shadow-xl">
           <AlertTriangle className="mx-auto h-8 w-8 text-red-700" />
           <p className="mt-3 text-sm font-black text-red-700">

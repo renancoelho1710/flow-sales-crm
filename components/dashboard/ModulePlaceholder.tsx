@@ -9,7 +9,7 @@ type ModulePlaceholderProps = {
 
 export function ModulePlaceholder({ title, description, primaryHref = "/dashboard", primaryLabel = "Voltar para dashboard" }: ModulePlaceholderProps) {
   return (
-    <main className="px-6 py-6">
+    <main className="flow-premium-page px-6 py-6">
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-[0.25em] text-blue-700">Flow Sales CRM</p>
         <h1 className="mt-3 text-2xl font-bold text-slate-950">{title}</h1>

@@ -38,7 +38,7 @@ export default async function Page({ searchParams }: PageProps) {
   const disponiveis = lista.filter((usuario) => usuario.status_operacional === "disponivel").length;
 
   return (
-    <main className="p-4 sm:p-6">
+    <main className="flow-premium-page p-4 sm:p-6">
       <div className="mx-auto max-w-[1500px] space-y-5">
         <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-700">Flow Sales CRM</p>

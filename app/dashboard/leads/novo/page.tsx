@@ -26,7 +26,7 @@ export default async function Page() {
 
   return (
     
-      <NovoLeadClient />
+      <NovoLeadClient perfil={usuarioInterno.perfil} />
     
   );
 }

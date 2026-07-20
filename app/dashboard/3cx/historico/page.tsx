@@ -22,9 +22,7 @@ import { createClient } from "@/lib/supabase/server";
 type Registro = Record<string, unknown>;
 
 type PageProps = {
-  searchParams?:
-    | Promise<Record<string, string | string[] | undefined>>
-    | Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 type LinhaHistorico = {
@@ -627,7 +625,7 @@ function LinhaHistoricoCard({
 }
 
 export default async function Page({ searchParams }: PageProps) {
-  const params = await Promise.resolve(searchParams || {});
+  const params: Record<string, string | string[] | undefined> = (await searchParams) ?? {};
   const periodo = parametro(params.periodo) || "todos";
   const tipo = parametro(params.tipo) || "todos";
   const busca = parametro(params.busca).toLowerCase();
@@ -748,7 +746,7 @@ export default async function Page({ searchParams }: PageProps) {
   const totalVinculos = vinculosNormalizados.length;
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
+    <main className="flow-premium-page min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1760px] space-y-5">
         <section className="overflow-hidden rounded-[34px] border border-slate-200 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.06)]">
           <div className="grid gap-0 xl:grid-cols-[1fr_380px]">

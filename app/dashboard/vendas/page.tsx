@@ -47,6 +47,28 @@ type Venda = {
   observacao: string | null;
   atualizado_em: string | null;
   ultima_sincronizacao: string | null;
+  operador_id?: string | null;
+  operador_nome?: string | null;
+  operador_email?: string | null;
+  validacao_status?: string | null;
+  elegivel_comissao?: boolean | null;
+  motivo_recusa?: string | null;
+  agendamento_id?: string | null;
+  lead_id?: string | null;
+  financeiro_detalhes?: Array<{
+    parcela: string | null;
+    instituicao: string | null;
+    valor: number | null;
+  }>;
+  parcela_tipo?: string | null;
+  valor_parcela?: number | null;
+  operador_vinculado_por_nome?: string | null;
+  operador_vinculado_em?: string | null;
+  operador_vinculo_atualizado_por_nome?: string | null;
+  operador_vinculo_atualizado_em?: string | null;
+  operador_vinculo_removido_por_nome?: string | null;
+  operador_vinculo_removido_em?: string | null;
+  operador_vinculo_remocao_motivo?: string | null;
 };
 
 type RetornoVendas = {
@@ -362,17 +384,18 @@ export default function Page() {
   }, [vendas]);
 
   return (
-    <div className="space-y-7 px-3 pb-8 pt-10 md:px-4 md:pt-12 lg:px-5 lg:pt-14">
-      <section className="rounded-[28px] border border-slate-200 bg-white p-7 shadow-sm">
+    <main className="flow-premium-page apple-page-shell">
+      <div className="apple-page-stack">
+      <section className="apple-surface p-7">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.35em] text-blue-700">
+            <p className="apple-eyebrow">
               Vendas
             </p>
-            <h1 className="mt-2 text-3xl font-black tracking-[-0.05em] text-slate-950">
+            <h1 className="apple-title text-[2.4rem]">
               Acompanhamento de vendas
             </h1>
-            <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-500">
+            <p className="apple-copy max-w-4xl">
               Acompanhe vendas confirmadas, pendências comerciais e divergências
               em um painel único, limpo e fácil de conferir.
             </p>
@@ -382,7 +405,7 @@ export default function Page() {
             <div className="relative">
               <button
                 onClick={() => setExportMenuAberto((aberto) => !aberto)}
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-800 shadow-sm transition hover:bg-slate-50"
+                className="apple-btn-secondary"
               >
                 <Download className="h-4 w-4" />
                 Baixar relatório
@@ -417,7 +440,7 @@ export default function Page() {
             <button
               onClick={carregar}
               disabled={carregando || sincronizando}
-              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
+              className="apple-btn-secondary disabled:opacity-60"
             >
               {carregando ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -430,7 +453,7 @@ export default function Page() {
             <button
               onClick={sincronizar}
               disabled={sincronizando}
-              className="inline-flex items-center gap-2 rounded-2xl bg-blue-700 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-700/20 transition hover:bg-blue-800 disabled:opacity-60"
+              className="apple-btn-primary disabled:opacity-60"
             >
               {sincronizando ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -442,7 +465,7 @@ export default function Page() {
           </div>
         </div>
 
-        <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-bold text-blue-800">
+        <div className="mt-5 apple-soft-card apple-tint-blue px-4 py-3 text-xs font-bold text-blue-800">
           Última sincronização: {dataHoraBr(ultimaSincronizacao)}
         </div>
       </section>
@@ -453,7 +476,7 @@ export default function Page() {
       />
 
       {syncMensagem ? (
-        <section className="rounded-[24px] border border-blue-100 bg-blue-50 p-4 shadow-sm">
+        <section className="apple-soft-card apple-tint-blue p-4">
           <div className="flex items-center justify-between gap-4">
             <p className="text-sm font-black text-blue-800">{syncMensagem}</p>
             <span className="text-sm font-black text-blue-800">
@@ -471,13 +494,13 @@ export default function Page() {
       ) : null}
 
       {erro ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-bold text-red-700">
+        <div className="apple-soft-card apple-tint-red px-5 py-4 text-sm font-bold text-red-700">
           {erro}
         </div>
       ) : null}
 
       {resultadoSync?.ok ? (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-800">
+        <div className="apple-soft-card apple-tint-emerald px-5 py-4 text-sm font-bold text-emerald-800">
           Planilha sincronizada: {resultadoSync.total_processadas || 0} placas
           processadas, {resultadoSync.confirmadas || 0} confirmadas,{" "}
           {resultadoSync.so_acompanhamento || 0} só no acompanhamento e{" "}
@@ -523,7 +546,7 @@ export default function Page() {
         />
       </section>
 
-      <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="apple-card p-5">
         <div className="grid gap-4">
           <div className="grid gap-3 xl:grid-cols-[1.4fr_180px_180px_140px]">
             <label className="relative">
@@ -538,7 +561,7 @@ export default function Page() {
                   }
                 }}
                 placeholder="Buscar por placa, cliente, veículo, vendedor ou operador..."
-                className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-semibold text-slate-800 outline-none transition focus:border-blue-300 focus:bg-white"
+                className="apple-input pl-11 pr-4 text-sm font-semibold text-slate-800"
               />
             </label>
 
@@ -548,7 +571,7 @@ export default function Page() {
                 setFiltroStatus(event.target.value);
                 setPagina(1);
               }}
-              className="h-12 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-black text-slate-800 outline-none focus:border-blue-300 focus:bg-white"
+              className="apple-select px-4 text-sm font-black text-slate-800"
             >
               <option value="todos">Todos os status</option>
               <option value="confirmado">Venda confirmada</option>
@@ -563,7 +586,7 @@ export default function Page() {
                 setFiltroLoja(event.target.value);
                 setPagina(1);
               }}
-              className="h-12 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-black text-slate-800 outline-none focus:border-blue-300 focus:bg-white"
+              className="apple-select px-4 text-sm font-black text-slate-800"
             >
               <option value="todas">Todas as lojas</option>
               {lojas.map((loja) => (
@@ -578,7 +601,7 @@ export default function Page() {
                 setPagina(1);
                 carregar();
               }}
-              className="h-12 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white transition hover:bg-blue-700"
+              className="apple-btn-primary h-12"
             >
               Buscar
             </button>
@@ -589,35 +612,35 @@ export default function Page() {
               value={filtroVendedor}
               onChange={(event) => setFiltroVendedor(event.target.value)}
               placeholder="Vendedor"
-              className="h-12 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none focus:border-blue-300 focus:bg-white"
+              className="apple-input px-4 text-sm font-semibold text-slate-800"
             />
 
             <input
               value={filtroOperador}
               onChange={(event) => setFiltroOperador(event.target.value)}
               placeholder="Operador de resgate"
-              className="h-12 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none focus:border-blue-300 focus:bg-white"
+              className="apple-input px-4 text-sm font-semibold text-slate-800"
             />
 
             <input
               value={filtroCarro}
               onChange={(event) => setFiltroCarro(event.target.value)}
               placeholder="Carro / modelo"
-              className="h-12 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none focus:border-blue-300 focus:bg-white"
+              className="apple-input px-4 text-sm font-semibold text-slate-800"
             />
 
             <input
               value={valorMin}
               onChange={(event) => setValorMin(event.target.value)}
               placeholder="Valor mínimo"
-              className="h-12 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none focus:border-blue-300 focus:bg-white"
+              className="apple-input px-4 text-sm font-semibold text-slate-800"
             />
 
             <input
               value={valorMax}
               onChange={(event) => setValorMax(event.target.value)}
               placeholder="Valor máximo"
-              className="h-12 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-800 outline-none focus:border-blue-300 focus:bg-white"
+              className="apple-input px-4 text-sm font-semibold text-slate-800"
             />
           </div>
 
@@ -630,7 +653,7 @@ export default function Page() {
                 type="date"
                 value={dataInicio}
                 onChange={(event) => setDataInicio(event.target.value)}
-                className="h-12 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-black text-slate-800 outline-none transition focus:border-blue-300 focus:bg-white"
+                className="apple-input px-4 text-sm font-black text-slate-800"
               />
             </label>
 
@@ -642,7 +665,7 @@ export default function Page() {
                 type="date"
                 value={dataFim}
                 onChange={(event) => setDataFim(event.target.value)}
-                className="h-12 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-black text-slate-800 outline-none transition focus:border-blue-300 focus:bg-white"
+                className="apple-input px-4 text-sm font-black text-slate-800"
               />
             </label>
 
@@ -665,7 +688,7 @@ export default function Page() {
               Limpar filtros
             </button>
 
-            <div className="self-end rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-bold text-blue-800">
+            <div className="self-end apple-soft-card apple-tint-blue px-4 py-3 text-xs font-bold text-blue-800">
               Mostrando {pagination.from} até {pagination.to} de{" "}
               {pagination.total} vendas.
             </div>
@@ -675,14 +698,14 @@ export default function Page() {
 
       <section className="grid gap-5">
         {carregando ? (
-          <div className="rounded-[28px] border border-slate-200 bg-white p-12 text-center shadow-sm">
+          <div className="apple-card p-12 text-center">
             <Loader2 className="mx-auto h-7 w-7 animate-spin text-blue-700" />
             <p className="mt-3 text-sm font-black text-slate-600">
               Carregando vendas...
             </p>
           </div>
         ) : vendas.length === 0 ? (
-          <div className="rounded-[28px] border border-dashed border-slate-300 bg-white p-12 text-center shadow-sm">
+          <div className="apple-card p-12 text-center border-dashed border-slate-300">
             <ClipboardCheck className="mx-auto h-8 w-8 text-slate-400" />
             <h3 className="mt-3 text-lg font-black text-slate-950">
               Nenhuma venda encontrada
@@ -722,7 +745,8 @@ export default function Page() {
           onClose={() => setVendaSelecionada(null)}
         />
       ) : null}
-    </div>
+      </div>
+    </main>
   );
 }
 
@@ -755,7 +779,7 @@ function PaginacaoVendas({
   if (total === 0) return null;
 
   return (
-    <section className="flex flex-col gap-4 rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm xl:flex-row xl:items-center xl:justify-between">
+    <section className="apple-card flex flex-col gap-4 p-4 xl:flex-row xl:items-center xl:justify-between">
       <div>
         <p className="text-sm font-bold text-slate-500">
           Mostrando <strong className="text-slate-950">{from}</strong> até{" "}
@@ -768,7 +792,7 @@ function PaginacaoVendas({
         <select
           value={pageSize}
           onChange={(event) => onPageSizeChange(Number(event.target.value))}
-          className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-black text-slate-700 outline-none transition hover:bg-slate-50"
+          className="apple-select h-10 px-3 text-sm font-black text-slate-700"
         >
           <option value={25}>25 por página</option>
           <option value={50}>50 por página</option>
@@ -777,7 +801,7 @@ function PaginacaoVendas({
         <button
           onClick={() => onPageChange(Math.max(page - 1, 1))}
           disabled={page <= 1}
-          className="h-10 rounded-xl border border-slate-200 px-4 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
+          className="apple-btn-secondary h-10 px-4 text-sm font-black text-slate-700 disabled:opacity-40"
         >
           Anterior
         </button>
@@ -798,8 +822,8 @@ function PaginacaoVendas({
                 onClick={() => onPageChange(item)}
                 className={`h-10 rounded-xl px-4 text-sm font-black transition ${
                   item === page
-                    ? "bg-blue-700 text-white"
-                    : "border border-slate-200 text-slate-700 hover:bg-slate-50"
+                    ? "apple-btn-primary text-white"
+                    : "apple-btn-secondary text-slate-700"
                 }`}
               >
                 {item}
@@ -811,7 +835,7 @@ function PaginacaoVendas({
         <button
           onClick={() => onPageChange(Math.min(page + 1, totalPages))}
           disabled={page >= totalPages}
-          className="h-10 rounded-xl border border-slate-200 px-4 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
+          className="apple-btn-secondary h-10 px-4 text-sm font-black text-slate-700 disabled:opacity-40"
         >
           Próxima
         </button>
@@ -833,18 +857,14 @@ function Indicador({
   classe: string;
 }) {
   return (
-    <article className={`rounded-3xl border p-5 shadow-sm ${classe}`}>
-      <div className="flex items-start justify-between gap-3">
+    <article className={`apple-stat-card ${classe}`}>
+      <div className="apple-stat-head">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.25em] opacity-70">
-            {titulo}
-          </p>
-          <strong className="mt-3 block text-3xl font-black">{valor}</strong>
-          <span className="mt-1 block text-xs font-bold opacity-70">
-            {descricao}
-          </span>
+          <p className="apple-stat-title opacity-70">{titulo}</p>
+          <strong className="apple-stat-value mt-3 block">{valor}</strong>
+          <span className="apple-stat-note mt-1 block opacity-80">{descricao}</span>
         </div>
-        <div className="rounded-2xl bg-white/70 p-3">
+        <div className="apple-stat-icon">
           <Icon className="h-5 w-5" />
         </div>
       </div>
@@ -860,7 +880,7 @@ function VendaCard({ venda, onClick }: { venda: Venda; onClick: () => void }) {
   return (
     <article
       onClick={onClick}
-      className="cursor-pointer rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
+      className="apple-list-card cursor-pointer p-5"
     >
       <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0 flex-1">
@@ -963,7 +983,7 @@ function VendaCard({ venda, onClick }: { venda: Venda; onClick: () => void }) {
             event.stopPropagation();
             onClick();
           }}
-          className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+          className="apple-btn-secondary"
         >
           Ver detalhes
         </button>
@@ -999,9 +1019,9 @@ function DetalheVenda({
       : venda.total_valor_acompanhamento || 0;
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 p-4 backdrop-blur-sm">
-      <div className="max-h-[92vh] w-full max-w-6xl overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-2xl">
-        <div className="border-b border-slate-200 bg-white px-7 py-6">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/55 p-4 backdrop-blur-md">
+      <div className="apple-detail-card max-h-[92vh] w-full max-w-6xl overflow-hidden shadow-2xl">
+        <div className="border-b border-white/70 bg-white/80 px-7 py-6 backdrop-blur-xl">
           <div className="flex items-start justify-between gap-5">
             <div>
               <div className="flex flex-wrap items-center gap-2">
@@ -1053,7 +1073,7 @@ function DetalheVenda({
           </div>
         </div>
 
-        <div className="max-h-[74vh] overflow-auto bg-slate-50 p-6">
+        <div className="max-h-[74vh] overflow-auto bg-slate-50/70 p-6">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <PainelResumo
               titulo="Cliente"

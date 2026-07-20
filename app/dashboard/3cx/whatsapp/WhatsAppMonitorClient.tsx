@@ -247,7 +247,7 @@ export function WhatsAppMonitorClient({ usuario }: { usuario: Usuario }) {
   const conectores = data?.conectores || [];
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
+    <main className="flow-premium-page min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1760px] space-y-5">
         <section className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-end">

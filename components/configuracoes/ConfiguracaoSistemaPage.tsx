@@ -755,7 +755,7 @@ export function ConfiguracaoSistemaPage({ slug }: { slug: ConfigSlug }) {
   const config = CONFIGS[slug];
 
   const [valor, setValor] = useState<Record<string, any>>(config.defaults);
-  const [usuario, setUsuario] = useState<ConfiguracoesApi["usuario"]>(null);
+  const [usuario, setUsuario] = useState<ConfiguracoesApi["usuario"] | null>(null);
   const [preferenciasUsuario, setPreferenciasUsuario] = useState<
     Record<string, any>
   >({
@@ -900,7 +900,7 @@ export function ConfiguracaoSistemaPage({ slug }: { slug: ConfigSlug }) {
 
   if (carregando) {
     return (
-      <main className="min-h-screen bg-slate-50 p-4 sm:p-6">
+      <main className="flow-premium-page min-h-screen bg-slate-50 p-4 sm:p-6">
         <div className="mx-auto flex min-h-[420px] max-w-[1200px] items-center justify-center rounded-[30px] border border-slate-200 bg-white">
           <div className="text-center">
             <Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-700" />
@@ -914,7 +914,7 @@ export function ConfiguracaoSistemaPage({ slug }: { slug: ConfigSlug }) {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-4 sm:p-6">
+    <main className="flow-premium-page min-h-screen bg-slate-50 p-4 sm:p-6">
       <div className="mx-auto max-w-[1200px] space-y-5">
         <section className="rounded-[30px] border border-slate-200 bg-white p-7 shadow-sm">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
